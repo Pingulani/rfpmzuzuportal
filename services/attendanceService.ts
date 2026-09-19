@@ -1,47 +1,22 @@
 import { supabase } from '../utils/supabase';
 
-export async function checkInMember(memberId: string) {
-  // 1. Get today's date formatted for PostgreSQL (YYYY-MM-DD)
-  const today = new Date().toISOString().split('T')[0];
+export async function checkInMember(memberId: string, serviceId: string) {
+  if (!serviceId) return { success: false, error: 'No active service session' };
 
-  // 2. Look for an existing service for today
-  let { data: service } = await supabase
-    .from('services')
-    .select('id')
-    .eq('service_date', today)
-    .maybeSingle(); // Safely returns null if no service exists yet today
-
-  // 3. If it's the first person of the day, create today's service record automatically
-  if (!service) {
-    const { data: newService, error: serviceError } = await supabase
-      .from('services')
-      .insert([{ service_date: today, service_type: 'Sunday', week_number: 1 }])
-      .select('id')
-      .single();
-
-    if (serviceError) {
-      console.error('Error creating service:', serviceError);
-      return { success: false };
-    }
-    service = newService;
-  }
-
-  // 4. Log the member into today's service
-  const { error: attendanceError } = await supabase
+  const { error } = await supabase
     .from('attendance')
-    .insert([{ service_id: service.id, member_id: memberId }]);
+    .insert([{ member_id: memberId, service_id: serviceId }]);
 
-  // PostgreSQL Error 23505 means they are already checked in (our UNIQUE constraint working!)
-  if (attendanceError?.code === '23505') {
-    return { success: true, message: 'Already checked in' };
-  }
-  
-  if (attendanceError) {
-    console.error('Error checking in:', attendanceError);
-    return { success: false };
+  if (error) {
+    if (error.code === '23505') {
+      // Already checked into this service
+      return { success: true }; 
+    }
+    console.error('Check-in error:', error);
+    return { success: false, error: error.message };
   }
 
-  return { success: true, message: 'Checked in' };
+  return { success: true };
 }
 export async function getLiveHeadcount() {
   const today = new Date().toISOString().split('T')[0];
@@ -67,4 +42,72 @@ export async function getLiveHeadcount() {
   }
 
   return count || 0;
+}
+export async function getTeamAttendanceBreakdown() {
+  const today = new Date().toISOString().split('T')[0];
+
+  // 1. Find today's service ID
+  const { data: service } = await supabase
+    .from('services')
+    .select('id')
+    .eq('service_date', today)
+    .maybeSingle();
+
+  if (!service) return [];
+
+  // 2. Fetch all attendance records for today, joining with member details (team)
+  const { data, error } = await supabase
+    .from('attendance')
+    .select(`
+      member_id,
+      members (
+        raw_team
+      )
+    `)
+    .eq('service_id', service.id);
+
+  if (error || !data) {
+    console.error('Error fetching team breakdown:', error);
+    return [];
+  }
+
+  // 3. Count members per team
+  const teamCounts: { [key: string]: number } = {};
+  data.forEach((record: any) => {
+    const team = record.members?.raw_team || 'General / Unassigned';
+    teamCounts[team] = (teamCounts[team] || 0) + 1;
+  });
+
+  // Convert to an array for easy rendering
+  return Object.keys(teamCounts).map((team) => ({
+    teamName: team,
+    count: teamCounts[team],
+  })).sort((a, b) => b.count - a.count);
+}
+export async function getOrCreateService(serviceDate: string, serviceType: string) {
+  // 1. Check if service exists for this date and type
+  const { data: existingService } = await supabase
+    .from('services')
+    .select('id')
+    .eq('service_date', serviceDate)
+    .eq('service_type', serviceType)
+    .maybeSingle();
+
+  if (existingService) {
+    return existingService.id;
+  }
+
+  // 2. If not, create it
+  const { data: newService, error } = await supabase
+    .from('services')
+    .insert([{ service_date: serviceDate, service_type: serviceType }])
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('Error creating service session:', error);
+    return null;
+  }
+
+  return newService.id;
 }

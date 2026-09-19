@@ -7,7 +7,7 @@ export async function searchMembers(query: string): Promise<Member[]> {
   
   const { data, error } = await supabase
     .from('members')
-    .select('id, first_name, last_name, phone_number, member_status')
+    .select('id, first_name, last_name, phone_number, member_status, raw_team, raw_category')
     .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`)
     .limit(5);
 
@@ -40,4 +40,18 @@ export async function registerNewcomer(firstName: string, lastName: string, phon
   }
   
   return data;
+}
+export async function getNewcomers() {
+  const { data, error } = await supabase
+    .from('members')
+    .select('id, first_name, last_name, phone_number, created_at, gender')
+    .eq('member_status', 'Newcomer')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching newcomers:', error);
+    return [];
+  }
+
+  return data || [];
 }

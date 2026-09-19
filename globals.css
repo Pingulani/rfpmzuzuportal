@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-sunday: #1b4332;
+  --color-brand-sunday-dark: #0b5c40;
+  --color-brand-sunday-light: #e6f4ea;
+  --color-brand-midweek: #1e3a8a;
+  --color-brand-midweek-dark: #172554;
+  --color-brand-midweek-light: #eff6ff;
+  --color-brand-gold: #fbeea3;
+  --color-brand-gold-dark: #a67c00;
+  --color-brand-gold-border: #f5e17a;
+  --color-brand-headcount: #fff4e6;
+  --color-brand-variance-bg: #fce8e8;
+  --color-brand-variance-text: #7f1d1d;
+}
+
+/* Smooth font rendering for a professional dashboard look */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

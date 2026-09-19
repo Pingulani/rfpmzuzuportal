@@ -1,33 +1,44 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getLiveHeadcount } from '../../services/attendanceService';
+import { supabase } from '../../utils/supabase';
 
-export default function LiveHeadcount() {
-  const [headcount, setHeadcount] = useState(0);
+interface LiveHeadcountProps {
+  serviceId: string;
+}
+
+export default function LiveHeadcount({ serviceId }: LiveHeadcountProps) {
+  const [count, setCount] = useState<number>(0);
 
   useEffect(() => {
-    async function fetchCount() {
-      const count = await getLiveHeadcount();
-      setHeadcount(count);
-    }
-    
-    // Fetch immediately when the page loads
-    fetchCount();
+    const currentServiceId = serviceId;
+    if (!currentServiceId) return;
 
-    // Silently refresh the number every 5 seconds
-    const interval = setInterval(fetchCount, 5000);
+    async function fetchHeadcount() {
+      const { count: total, error } = await supabase
+        .from('attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('service_id', currentServiceId);
+
+      if (!error && total !== null) {
+        setCount(total);
+      }
+    }
+
+    fetchHeadcount();
+
+    const interval = setInterval(fetchHeadcount, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [serviceId]);
 
   return (
-    <div className="w-full max-w-lg bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-6 flex items-center justify-between">
+    <div className="w-full max-w-lg bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-6 flex justify-between items-center">
       <div>
         <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide">Live Headcount</h2>
-        <p className="text-sm text-gray-500 font-medium mt-1">Today's Total Check-ins</p>
+        <p className="text-xs text-gray-500">Total Check-ins for Selected Service</p>
       </div>
-      <div className="bg-red-800 text-white text-4xl font-black py-3 px-8 rounded-lg shadow-inner">
-        {headcount}
+      <div className="bg-red-800 text-white text-3xl font-black px-6 py-3 rounded-lg shadow">
+        {count}
       </div>
     </div>
   );
