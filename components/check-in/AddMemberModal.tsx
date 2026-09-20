@@ -28,7 +28,7 @@ const TEAMS = [
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (memberName: string) => void;
+  onSuccess: (data?: any) => void; // 🔴 Changed from () => void;
 }
 
 export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalProps) {

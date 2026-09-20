@@ -7,10 +7,11 @@ import { X, Save, Loader2, AlertCircle, Calendar } from 'lucide-react';
 interface NewcomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (data?: any) => void;
+  selectedServiceId?: string;
 }
 
-export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerModalProps) {
+export default function NewcomerModal({ isOpen, onClose, onSuccess, selectedServiceId: initialServiceId }: NewcomerModalProps) {
   // 1. Form State matching the paper form exactly
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
@@ -31,7 +32,7 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
   
   // Tracking
   const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(initialServiceId || '');
   const [availableServices, setAvailableServices] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
@@ -51,22 +52,24 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
       
       if (!error && data) {
         setAvailableServices(data);
-        if (data.length > 0) setSelectedServiceId(data[0].id);
+        if (!initialServiceId && data.length > 0) {
+          setSelectedServiceId(data[0].id);
+        }
       }
     }
     fetchServices();
-  }, [isOpen]);
+  }, [isOpen, initialServiceId]);
 
   if (!isOpen) return null;
 
-  // 3. Submit Handler sending to 'newcomers' table
+  // 3. Submit Handler sending to newcomers, members, and attendance tables
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      // 1. Save rich details to the isolated 'newcomers' table
+      // Step A: Save full details to 'newcomers' table
       const { error: insertError } = await supabase
         .from('newcomers')
         .insert([{
@@ -88,24 +91,23 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
 
       if (insertError) throw new Error(`Newcomers Table: ${insertError.message}`);
 
-      // 2. Dual-Write: Create a synced profile in the 'members' table
+      // Step B: Sync lightweight profile to 'members' so the Matrix & Check-in buttons work
       const nameParts = fullName.trim().split(' ');
       const first = nameParts[0];
       const last = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
 
-      // 🔴 FIX: Flood ALL category fields so the Matrix and Check-in buttons never crash on nulls
       const { data: newMember, error: memberError } = await supabase
         .from('members')
         .insert([{
           first_name: first,
           last_name: last,
           phone_number: phone.trim() || null,
-          zone: 'New Members',         // Ensures manual check-in UI doesn't crash
-          category: 'New Members',     // Backup Matrix catch
-          raw_category: 'New Members', // Primary Matrix catch
-          raw_team: 'N/A',             // Prevents team-based null constraint errors
+          zone: 'New Members',         
+          category: 'New Members',     
+          raw_category: 'New Members', 
+          raw_team: 'N/A',             
           gender: gender || 'Unknown',
-          member_status: 'Newcomer',
+          member_status: 'Active',     // Active ensures they show up in the check-in directory
           date_joined: visitDate
         }])
         .select('id')
@@ -113,25 +115,21 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
 
       if (memberError) throw new Error(`Members Directory: ${memberError.message}`);
 
-      // 3. Auto Check-in: Link to the 'attendance' table
+      // Step C: Auto Check-in to trigger the Matrix real-time update
       if (selectedServiceId && newMember) {
         const { error: attendanceError } = await supabase
           .from('attendance')
           .insert([{
             service_id: selectedServiceId,
             member_id: newMember.id
-            // Note: Removed JS check_in_time to let Postgres safely use default now()
           }]);
 
-        if (attendanceError) {
-          // Ignore unique constraint errors (23505) if they somehow double-click
-          if (attendanceError.code !== '23505') { 
-            throw new Error(`Attendance Check-in: ${attendanceError.message}`);
-          }
+        if (attendanceError && attendanceError.code !== '23505') {
+          throw new Error(`Attendance Check-in: ${attendanceError.message}`);
         }
       }
 
-      onSuccess();
+      onSuccess(fullName);
       onClose();
     } catch (err: any) {
       console.error('Error saving newcomer:', err.message);
@@ -141,6 +139,7 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
     }
   };
 
+  // 4. Render the Form UI
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-[#e8e8e8] w-full max-w-2xl rounded shadow-2xl overflow-hidden flex flex-col max-h-[95vh] border-[6px] border-black p-2 relative">
@@ -151,7 +150,6 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
 
         <div className="overflow-y-auto bg-white border-[4px] border-black p-6 h-full">
           
-          {/* Header */}
           <div className="w-full text-center border-b-4 border-black pb-4 mb-6">
             <h1 className="text-4xl font-black font-serif tracking-tight text-black">Welcome To</h1>
             <h2 className="text-xl font-bold font-serif text-black mt-1">Raised For A Purpose (RFP) Ministries</h2>
@@ -164,7 +162,6 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
               </div>
             )}
 
-            {/* Form Fields */}
             <div className="flex flex-col gap-3">
               <label className="text-base font-bold text-black flex items-end gap-2">
                 Full Name: 
@@ -206,7 +203,6 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
               </label>
             </div>
 
-            {/* How Did You Hear Section */}
             <div className="mt-6">
               <h3 className="text-2xl font-black font-serif text-center text-black mb-4">How Did You Hear of RFP?</h3>
               <div className="flex flex-col gap-4 pl-2">
@@ -223,7 +219,6 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
               </div>
             </div>
 
-            {/* Socials Using Text Labels to Avoid Lucide Errors */}
             <div className="flex flex-col gap-4 pl-2 mt-4">
               <label className="flex items-end gap-2 text-xl font-bold font-serif text-black">
                 f:
@@ -239,7 +234,6 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerMo
               </label>
             </div>
 
-            {/* Submit & Service Linkage */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-6 border-t-4 border-black">
               <label className="text-base font-bold text-black flex items-end gap-2">
                 Current Date:
