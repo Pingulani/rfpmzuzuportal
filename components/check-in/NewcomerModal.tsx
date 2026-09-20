@@ -69,7 +69,7 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess, selectedServ
     setError(null);
 
     try {
-      // Step A: Save full details to 'newcomers' table
+      // 1. Save rich details to the isolated 'newcomers' table
       const { error: insertError } = await supabase
         .from('newcomers')
         .insert([{
@@ -91,23 +91,22 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess, selectedServ
 
       if (insertError) throw new Error(`Newcomers Table: ${insertError.message}`);
 
-      // Step B: Sync lightweight profile to 'members' so the Matrix & Check-in buttons work
+      // 2. Dual-Write: Create a synced profile in the 'members' table
       const nameParts = fullName.trim().split(' ');
       const first = nameParts[0];
       const last = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
 
+      // 🔴 FIX: Removed non-existent 'category' and 'zone' columns to stop schema cache errors
       const { data: newMember, error: memberError } = await supabase
         .from('members')
         .insert([{
           first_name: first,
           last_name: last,
           phone_number: phone.trim() || null,
-          zone: 'New Members',         
-          category: 'New Members',     
-          raw_category: 'New Members', 
-          raw_team: 'N/A',             
+          raw_category: 'New Members', // Primary Matrix catch field
+          raw_team: 'N/A',             // Prevents team-based null constraint errors
           gender: gender || 'Unknown',
-          member_status: 'Active',     // Active ensures they show up in the check-in directory
+          member_status: 'Active',     
           date_joined: visitDate
         }])
         .select('id')
@@ -115,7 +114,7 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess, selectedServ
 
       if (memberError) throw new Error(`Members Directory: ${memberError.message}`);
 
-      // Step C: Auto Check-in to trigger the Matrix real-time update
+      // 3. Auto Check-in: Link to the 'attendance' table
       if (selectedServiceId && newMember) {
         const { error: attendanceError } = await supabase
           .from('attendance')

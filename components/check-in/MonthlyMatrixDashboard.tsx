@@ -14,20 +14,19 @@ const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
 const ZONE_CATEGORIES = [
   {
-    groupName: "STANDARD ZONES",
+    groupName: "ZONES",
     zones: ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4']
   },
   {
-    groupName: "TERTIARY INSTITUTIONS",
+    groupName: "CAMPUSES",
     zones: ['MCA', 'Mzuzu Technical', 'MIT', 'MZUNI', 'UNILIA', 'MIJ']
   },
   {
-    groupName: "OTHER CATEGORIES",
+    groupName: "OTHER",
     zones: ['Other Branches', 'Special Services', 'New Members', 'Unknown Zone or Not in a Zone']
   }
 ];
 
-// 🔴 FIX: Locked to UTC Noon to prevent live timezone shifts from breaking current-week dates (Week 3)
 function getCalendarDatesForMonth(year: number, month: number, targetDayOfWeek: number) {
   const dates = [];
   let date = new Date(Date.UTC(year, month - 1, 1, 12, 0, 0));
@@ -52,14 +51,38 @@ export default function MonthlyMatrixDashboard() {
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  const [manualHeadcounts, setManualHeadcounts] = useState<Record<number, string>>({});
-  const [manualSouls, setManualSouls] = useState<Record<number, string>>({});
+  const [manualHeadcounts, setManualHeadcounts] = useState<Record<number, string>>(() => {
+    if (typeof window === 'undefined') return {};
+    const saved = localStorage.getItem(`mzuzu_hc_${selectedYear}_${selectedMonth}_${activeServiceType}`);
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [manualSouls, setManualSouls] = useState<Record<number, string>>(() => {
+    if (typeof window === 'undefined') return {};
+    const saved = localStorage.getItem(`mzuzu_souls_${selectedYear}_${selectedMonth}_${activeServiceType}`);
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const [visionTarget, setVisionTarget] = useState('350');
 
   useEffect(() => {
-    setManualHeadcounts({});
-    setManualSouls({});
+    const savedHc = localStorage.getItem(`mzuzu_hc_${selectedYear}_${selectedMonth}_${activeServiceType}`);
+    const savedSouls = localStorage.getItem(`mzuzu_souls_${selectedYear}_${selectedMonth}_${activeServiceType}`);
+    setManualHeadcounts(savedHc ? JSON.parse(savedHc) : {});
+    setManualSouls(savedSouls ? JSON.parse(savedSouls) : {});
   }, [selectedMonth, selectedYear, activeServiceType]);
+
+  const handleHeadcountChange = (wkNum: number, val: string) => {
+    const updated = { ...manualHeadcounts, [wkNum]: val };
+    setManualHeadcounts(updated);
+    localStorage.setItem(`mzuzu_hc_${selectedYear}_${selectedMonth}_${activeServiceType}`, JSON.stringify(updated));
+  };
+
+  const handleSoulsChange = (wkNum: number, val: string) => {
+    const updated = { ...manualSouls, [wkNum]: val };
+    setManualSouls(updated);
+    localStorage.setItem(`mzuzu_souls_${selectedYear}_${selectedMonth}_${activeServiceType}`, JSON.stringify(updated));
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -139,12 +162,13 @@ export default function MonthlyMatrixDashboard() {
   const calendarDates = getCalendarDatesForMonth(selectedYear, selectedMonth, targetDayOfWeek);
   const weekNumbersArray = calendarDates.map((_, i) => i + 1);
 
-  // 🔴 FIX: Added .trim() to ensure trailing spaces in Supabase don't break Week 3 mapping
   const weeksDataTemplate = calendarDates.map((dateStr, index) => {
-    const matchedService = services.find((s: any) => s.service_date?.trim() === dateStr.trim());
-    const serviceId = matchedService ? matchedService.id : null;
-    const matchedRecords = serviceId ? attendanceRecords.filter((r: any) => r.service_id === serviceId) : [];
-    return { weekNum: index + 1, serviceId, matchedRecords, dateStr };
+    const matchedServices = services.filter((s: any) => s.service_date?.trim() === dateStr.trim());
+    const serviceIds = matchedServices.map((s: any) => s.id);
+    const matchedRecords = serviceIds.length > 0 
+      ? attendanceRecords.filter((r: any) => serviceIds.includes(r.service_id)) 
+      : [];
+    return { weekNum: index + 1, serviceId: serviceIds[0] || null, matchedRecords, dateStr };
   });
 
   const isZoneMatch = (dbCat: string, targetZone: string) => {
@@ -153,17 +177,9 @@ export default function MonthlyMatrixDashboard() {
     
     if (db === target) return true;
     
-    if (target === 'new members' && (db.includes('new member') || db.includes('newcomer'))) {
-      return true;
-    }
-
-    if (target === 'other branches' && (db.includes('other branch') || db.includes('visiting'))) {
-      return true;
-    }
-
-    if (target === 'unknown zone or not in a zone' && (db === '' || db.includes('unknown') || db.includes('not in a zone') || db === 'n/a')) {
-      return true;
-    }
+    if (target === 'new members' && (db.includes('new member') || db.includes('newcomer'))) return true;
+    if (target === 'other branches' && (db.includes('other branch') || db.includes('visiting'))) return true;
+    if (target === 'unknown zone or not in a zone' && (db === '' || db.includes('unknown') || db.includes('not in a zone') || db === 'n/a')) return true;
     
     return false;
   };
@@ -182,64 +198,64 @@ export default function MonthlyMatrixDashboard() {
     : '0.0';
 
   return (
-    <div className="w-full max-w-7xl flex flex-col gap-5">
+    <div className="w-full max-w-7xl flex flex-col gap-4">
       
-      <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+      <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
         <div className="flex gap-2">
           <button 
             onClick={() => setActiveServiceType('Sunday Service')} 
-            className={`px-4 py-2.5 text-xs font-black uppercase rounded-xl transition-all duration-200 flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? `${theme.primaryBg} text-white shadow-md scale-[1.02]` : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all duration-200 flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? `${theme.primaryBg} text-white shadow-md` : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             <Calendar className="w-4 h-4" /> Sunday Services
           </button>
           <button 
             onClick={() => setActiveServiceType('Midweek Service')} 
-            className={`px-4 py-2.5 text-xs font-black uppercase rounded-xl transition-all duration-200 flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? `${theme.primaryBg} text-white shadow-md scale-[1.02]` : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all duration-200 flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? `${theme.primaryBg} text-white shadow-md` : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             <Users className="w-4 h-4" /> Midweek Services
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="p-2.5 text-xs font-black uppercase bg-gray-50 border border-gray-300 text-gray-800 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none">
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 text-gray-800 rounded-lg focus:ring-2 focus:ring-emerald-800 focus:outline-none">
             {MONTHS.map((m, idx) => (<option key={m} value={idx + 1}>{m}</option>))}
           </select>
-          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="p-2.5 text-xs font-black uppercase bg-gray-50 border border-gray-300 text-gray-800 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none">
+          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 text-gray-800 rounded-lg focus:ring-2 focus:ring-emerald-800 focus:outline-none">
             {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
           </select>
           <button 
             onClick={handleDownload} 
-            className={`px-4 py-2.5 text-xs font-black uppercase rounded-xl transition-all duration-200 flex items-center gap-2 bg-emerald-800 text-white shadow-md hover:bg-emerald-900`}
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 bg-emerald-800 text-white hover:bg-emerald-900`}
           >
-            <Download className="w-4 h-4" /> Export PNG
+            <Download className="w-4 h-4" /> Export Report
           </button>
         </div>
       </div>
 
-      <div id="matrix-export-container" className="bg-[#fefce8] p-5 md:p-8 rounded-2xl w-full flex flex-col gap-6 font-sans text-gray-900 border border-yellow-200 shadow-xl">
+      <div id="matrix-export-container" className="bg-[#fefce8] p-4 md:p-6 rounded-2xl w-full flex flex-col gap-4 font-sans text-gray-900 border border-yellow-200 shadow-xl">
         
-        <div className={`${theme.primaryBg} text-white p-6 rounded-xl flex justify-between items-center shadow-md relative overflow-hidden`}>
-          <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-32 h-32 bg-white/5 rounded-full pointer-events-none"></div>
+        <div className={`${theme.primaryBg} text-white p-5 rounded-xl flex justify-between items-center shadow-md relative overflow-hidden`}>
+          <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-24 h-24 bg-white/5 rounded-full pointer-events-none"></div>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-4 h-4 text-[#facc15]" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Executive Ministry Report</span>
+              <span className="text-xs font-black uppercase tracking-widest text-emerald-200">BRANCH ATTENDANCE REPORT</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-black tracking-wider uppercase">
               MZUZU BRANCH
             </h1>
-            <h2 className="text-[#facc15] text-xs font-black tracking-widest mt-1">
-              {MONTHS[selectedMonth - 1].toUpperCase()} {selectedYear} — {activeServiceType.toUpperCase()} ZONES MATRIX
+            <h2 className="text-[#facc15] text-sm font-black tracking-widest mt-1">
+              {MONTHS[selectedMonth - 1].toUpperCase()} {selectedYear} — {activeServiceType.toUpperCase()} ZONES
             </h2>
           </div>
           <div className="text-right">
             <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider block">Generated Date</span>
-            <span className="text-xs font-black text-white">{new Date().toLocaleDateString('en-GB')}</span>
+            <span className="text-sm font-black text-white">{new Date().toLocaleDateString('en-GB')}</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
           
-          <div className="lg:col-span-4 flex flex-col gap-3">
+          <div className="lg:col-span-4 flex flex-col gap-2">
             {displayWeeks.map((wkNum) => {
               const wkInfo = weeksDataTemplate[wkNum - 1];
               const registeredCount = wkInfo?.serviceId ? wkInfo.matchedRecords.length : 0;
@@ -249,44 +265,44 @@ export default function MonthlyMatrixDashboard() {
               const isAvailable = !!wkInfo;
 
               return (
-                <div key={wkNum} className={`bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden text-xs transition-all ${!isAvailable && 'opacity-50 grayscale bg-gray-50'}`}>
-                  <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white px-4 py-2 flex justify-between items-center font-black">
-                    <span className="tracking-wider flex items-center gap-1.5">
+                <div key={wkNum} className={`bg-white rounded-lg shadow-sm border border-gray-200/80 overflow-hidden transition-all ${!isAvailable && 'opacity-50 grayscale bg-gray-50'}`}>
+                  <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white px-3 py-1.5 flex justify-between items-center font-black">
+                    <span className="tracking-wider flex items-center gap-1.5 text-sm">
                       <span className="w-2 h-2 rounded-full bg-blue-400"></span>
                       WEEK {wkNum}
                     </span>
-                    <span className="text-[10px] font-semibold text-blue-200 font-mono">{dateDisplay}</span>
+                    <span className="text-[11px] font-bold text-blue-200 font-mono">{dateDisplay}</span>
                   </div>
-                  <div className="p-3.5 space-y-2.5">
-                    <div className="flex justify-between items-center font-black text-sm pb-2.5 border-b border-gray-100">
-                      <span className="text-gray-500 font-bold uppercase text-[11px]">Headcount</span>
+                  <div className="p-2 space-y-1.5">
+                    <div className="flex justify-between items-center font-black pb-1.5 border-b border-gray-100">
+                      <span className="text-gray-500 font-bold uppercase text-xs">Headcount</span>
                       <input 
                         type="number"
                         value={manualHeadcounts[wkNum] || ''}
-                        onChange={(e) => setManualHeadcounts(prev => ({...prev, [wkNum]: e.target.value}))}
-                        className="w-20 text-right font-black text-base text-gray-900 bg-gray-50 hover:bg-gray-100 focus:bg-white border border-gray-200 rounded-lg p-1 focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all"
+                        onChange={(e) => handleHeadcountChange(wkNum, e.target.value)}
+                        className="w-20 text-right font-black text-lg text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded p-0.5 focus:ring-2 focus:outline-none transition-all"
                         placeholder="0"
                         disabled={!isAvailable}
                       />
                     </div>
-                    <div className="flex justify-between items-center text-gray-600 font-semibold px-1">
-                      <span className="text-xs">System Registered</span>
-                      <span className="font-bold text-gray-900 font-mono">{registeredCount}</span>
+                    <div className="flex justify-between items-center text-gray-700 px-1">
+                      <span className="text-sm font-bold">Registered</span>
+                      <span className="font-black text-base text-gray-900 font-mono">{registeredCount}</span>
                     </div>
-                    <div className="flex justify-between items-center text-gray-600 font-semibold px-1">
-                      <span className="text-xs">Souls Won</span>
+                    <div className="flex justify-between items-center text-gray-700 px-1">
+                      <span className="text-sm font-bold">Souls Won</span>
                       <input 
                         type="number"
                         value={manualSouls[wkNum] || ''}
-                        onChange={(e) => setManualSouls(prev => ({...prev, [wkNum]: e.target.value}))}
-                        className="w-14 text-right text-red-600 font-black bg-gray-50 hover:bg-gray-100 focus:bg-white border border-gray-200 rounded-lg p-1 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none transition-all"
+                        onChange={(e) => handleSoulsChange(wkNum, e.target.value)}
+                        className="w-14 text-right text-red-600 font-black text-sm bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded p-0.5 focus:outline-none transition-all"
                         placeholder="0"
                         disabled={!isAvailable}
                       />
                     </div>
-                    <div className="flex justify-between items-center font-bold px-1 pt-1 border-t border-gray-100 text-[11px]">
-                      <span className="text-gray-500 uppercase">Variance</span>
-                      <span className={`font-black font-mono px-2 py-0.5 rounded ${variance > 0 ? 'bg-emerald-50 text-emerald-700' : variance < 0 ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                    <div className="flex justify-between items-center font-bold px-1 pt-1.5 border-t border-gray-100 text-xs">
+                      <span className="text-gray-500 uppercase">Var</span>
+                      <span className={`font-black font-mono text-sm px-2 rounded ${variance > 0 ? 'bg-emerald-50 text-emerald-700' : variance < 0 ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
                         {variance > 0 ? `+${variance}` : variance}
                       </span>
                     </div>
@@ -295,7 +311,7 @@ export default function MonthlyMatrixDashboard() {
               );
             })}
 
-            <div className={`${theme.primaryBg} text-white p-4 rounded-xl shadow-md flex justify-between items-center mt-2 border border-emerald-700/40`}>
+            <div className={`${theme.primaryBg} text-white p-3 rounded-lg shadow-md flex justify-between items-center mt-1 border border-emerald-700/40`}>
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200 block">Monthly Performance</span>
                 <span className="font-black text-sm tracking-wider uppercase">Average Attendance</span>
@@ -304,23 +320,23 @@ export default function MonthlyMatrixDashboard() {
             </div>
           </div>
 
-          <div className="lg:col-span-8 flex flex-col gap-4">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
-              <table className="w-full text-left border-collapse text-xs font-medium">
+          <div className="lg:col-span-8 flex flex-col gap-3">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200/80 overflow-hidden">
+              <table className="w-full text-left border-collapse font-medium">
                 <thead>
-                  <tr className="bg-gray-900 text-white border-b border-gray-800 text-[11px]">
-                    <th className="py-3 px-4 uppercase tracking-wider font-black">ZONE / CATEGORY</th>
+                  <tr className="bg-gray-900 text-white border-b border-gray-800 text-xs">
+                    <th className="py-2 px-3 uppercase tracking-wider font-black">ZONES / CATEGORY</th>
                     {displayWeeks.map(wk => (
-                      <th key={wk} className="py-3 px-2 text-center uppercase tracking-wider font-black w-12">WK{wk}</th>
+                      <th key={wk} className="py-2 px-2 text-center uppercase tracking-wider font-black w-12">WK{wk}</th>
                     ))}
-                    <th className="py-3 px-3 text-center bg-[#fef08a] text-gray-900 uppercase tracking-wider font-black w-14">AVG</th>
+                    <th className="py-2 px-3 text-center bg-[#fef08a] text-gray-900 uppercase tracking-wider font-black w-16">AVG</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {ZONE_CATEGORIES.map((group, gIdx) => (
                     <Fragment key={gIdx}>
-                      <tr className="bg-gray-100/80 border-y border-gray-200 text-[#034a36] text-[10px] font-black uppercase tracking-wider">
-                        <td colSpan={7} className="py-2.5 px-4">
+                      <tr className="bg-gray-100/80 border-y border-gray-200 text-[#034a36] text-[11px] font-black uppercase tracking-wider">
+                        <td colSpan={7} className="py-1.5 px-3">
                           <div className="flex items-center gap-1.5"><Filter className="w-3 h-3 opacity-70" /> {group.groupName}</div>
                         </td>
                       </tr>
@@ -338,13 +354,13 @@ export default function MonthlyMatrixDashboard() {
 
                         return (
                           <tr key={zIdx} className="hover:bg-gray-50/80 transition-colors border-b border-gray-100 text-gray-800">
-                            <td className="py-3 px-4 font-bold text-gray-900">{zoneName}</td>
+                            <td className="py-1.5 px-3 font-bold text-sm text-gray-900">{zoneName}</td>
                             {weeklyCounts.map((count, wIdx) => (
-                              <td key={wIdx} className="py-3 px-2 text-center font-mono font-semibold">
-                                {count === null ? <span className="text-gray-300">-</span> : count > 0 ? <span className="text-gray-900 font-bold">{count}</span> : <span className="text-gray-300">0</span>}
+                              <td key={wIdx} className="py-1.5 px-2 text-center font-mono font-bold text-sm">
+                                {count === null ? <span className="text-gray-300">-</span> : count > 0 ? <span className="text-gray-900 font-black">{count}</span> : <span className="text-gray-300">0</span>}
                               </td>
                             ))}
-                            <td className="py-3 px-3 text-center bg-[#fef08a]/60 font-black text-gray-900 font-mono">{avg}</td>
+                            <td className="py-1.5 px-3 text-center bg-[#fef08a]/60 font-black text-gray-900 text-sm font-mono">{avg}</td>
                           </tr>
                         );
                       })}
@@ -355,24 +371,24 @@ export default function MonthlyMatrixDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-auto">
-              <div className={`${theme.primaryBg} text-white p-4 rounded-xl flex justify-between items-center shadow-sm border border-emerald-700/40`}>
+              <div className={`${theme.primaryBg} text-white p-3 rounded-lg flex justify-between items-center shadow-sm border border-emerald-700/40`}>
                 <div>
-                  <span className="text-[10px] font-black tracking-wider text-emerald-200 uppercase block">Strategic Goal</span>
-                  <span className="font-bold text-xs uppercase">Vision 100% Target</span>
+                  <span className="text-[10px] font-black tracking-wider text-emerald-200 uppercase block">VISION 100</span>
+                  <span className="font-bold text-sm uppercase">Vision 100% Target</span>
                 </div>
                 <input 
                   type="number"
                   value={visionTarget}
                   onChange={(e) => setVisionTarget(e.target.value)}
-                  className="w-24 bg-black/20 border border-yellow-500/30 text-right text-[#facc15] font-black text-xl rounded-lg p-1.5 focus:outline-none font-mono"
+                  className="w-24 bg-black/20 border border-yellow-500/30 text-right text-[#facc15] font-black text-xl rounded p-1 focus:outline-none font-mono"
                 />
               </div>
-              <div className={`${theme.primaryBg} text-white p-4 rounded-xl flex justify-between items-center shadow-sm border border-emerald-700/40`}>
+              <div className={`${theme.primaryBg} text-white p-3 rounded-lg flex justify-between items-center shadow-sm border border-emerald-700/40`}>
                 <div>
                   <span className="text-[10px] font-black tracking-wider text-emerald-200 uppercase block">Milestone Status</span>
-                  <span className="font-bold text-xs uppercase">Achieved Rate</span>
+                  <span className="font-bold text-sm uppercase">Achieved Rate</span>
                 </div>
-                <span className="text-[#facc15] font-black text-2xl font-mono bg-black/20 px-3 py-1 rounded-lg border border-yellow-500/30">{achievedPercent}%</span>
+                <span className="text-[#facc15] font-black text-2xl font-mono bg-black/20 px-3 py-1 rounded border border-yellow-500/30">{achievedPercent}%</span>
               </div>
             </div>
 
