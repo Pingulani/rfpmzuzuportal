@@ -27,17 +27,19 @@ const ZONE_CATEGORIES = [
   }
 ];
 
+// 🔴 FIX: Locked to UTC Noon to prevent live timezone shifts from breaking current-week dates (Week 3)
 function getCalendarDatesForMonth(year: number, month: number, targetDayOfWeek: number) {
   const dates = [];
-  const date = new Date(year, month - 1, 1);
-  while (date.getMonth() === month - 1) {
-    if (date.getDay() === targetDayOfWeek) {
-      const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
+  let date = new Date(Date.UTC(year, month - 1, 1, 12, 0, 0));
+  
+  while (date.getUTCMonth() === month - 1) {
+    if (date.getUTCDay() === targetDayOfWeek) {
+      const yyyy = date.getUTCFullYear();
+      const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(date.getUTCDate()).padStart(2, '0');
       dates.push(`${yyyy}-${mm}-${dd}`);
     }
-    date.setDate(date.getDate() + 1);
+    date.setUTCDate(date.getUTCDate() + 1);
   }
   return dates;
 }
@@ -79,7 +81,6 @@ export default function MonthlyMatrixDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [activeServiceType, selectedMonth, selectedYear]);
 
-  // Enhanced handleDownload to ensure all editable input fields render cleanly in the export
   const handleDownload = async () => {
     const element = document.getElementById('matrix-export-container');
     if (!element) return;
@@ -90,7 +91,6 @@ export default function MonthlyMatrixDashboard() {
         logging: false,
         useCORS: true,
         onclone: (clonedDoc) => {
-          // Mirror input values into text nodes for flawless canvas rendering
           const clonedContainer = clonedDoc.getElementById('matrix-export-container');
           if (clonedContainer) {
             const inputs = clonedContainer.querySelectorAll('input');
@@ -139,33 +139,28 @@ export default function MonthlyMatrixDashboard() {
   const calendarDates = getCalendarDatesForMonth(selectedYear, selectedMonth, targetDayOfWeek);
   const weekNumbersArray = calendarDates.map((_, i) => i + 1);
 
+  // 🔴 FIX: Added .trim() to ensure trailing spaces in Supabase don't break Week 3 mapping
   const weeksDataTemplate = calendarDates.map((dateStr, index) => {
-    const matchedService = services.find((s: any) => s.service_date === dateStr);
+    const matchedService = services.find((s: any) => s.service_date?.trim() === dateStr.trim());
     const serviceId = matchedService ? matchedService.id : null;
     const matchedRecords = serviceId ? attendanceRecords.filter((r: any) => r.service_id === serviceId) : [];
     return { weekNum: index + 1, serviceId, matchedRecords, dateStr };
   });
 
-  // 🔴 UPDATED & BULLETPROOF ZONE MATCHER
   const isZoneMatch = (dbCat: string, targetZone: string) => {
     const target = targetZone.trim().toLowerCase();
     const db = dbCat ? dbCat.trim().toLowerCase() : ''; 
     
-    // 1. Direct exact match (Catches perfectly spelled "Zone 1", "New Members", etc.)
     if (db === target) return true;
     
-    // 2. Wide net for New Members historical data
-    // Catches "new members", "new member", "newcomer", etc. without breaking other zones
     if (target === 'new members' && (db.includes('new member') || db.includes('newcomer'))) {
       return true;
     }
 
-    // 3. Wide net for Other Branches
     if (target === 'other branches' && (db.includes('other branch') || db.includes('visiting'))) {
       return true;
     }
 
-    // 4. Catch-all for unknown or empty categories
     if (target === 'unknown zone or not in a zone' && (db === '' || db.includes('unknown') || db.includes('not in a zone') || db === 'n/a')) {
       return true;
     }
@@ -177,7 +172,6 @@ export default function MonthlyMatrixDashboard() {
     ? { primaryBg: 'bg-[#034a36]', secondaryBg: 'bg-[#023325]', accentBorder: 'border-emerald-800' }
     : { primaryBg: 'bg-indigo-900', secondaryBg: 'bg-indigo-950', accentBorder: 'border-indigo-800' };
 
-  // UI calculations
   const displayWeeks = [1, 2, 3, 4, 5];
   const enteredHeadcounts = Object.values(manualHeadcounts).map(Number).filter(n => n > 0);
   const avgAttendance = enteredHeadcounts.length > 0 
@@ -190,7 +184,6 @@ export default function MonthlyMatrixDashboard() {
   return (
     <div className="w-full max-w-7xl flex flex-col gap-5">
       
-      {/* Top Controls Bar */}
       <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
         <div className="flex gap-2">
           <button 
@@ -222,10 +215,8 @@ export default function MonthlyMatrixDashboard() {
         </div>
       </div>
 
-      {/* Printable / Exportable Container */}
       <div id="matrix-export-container" className="bg-[#fefce8] p-5 md:p-8 rounded-2xl w-full flex flex-col gap-6 font-sans text-gray-900 border border-yellow-200 shadow-xl">
         
-        {/* Executive Header Banner */}
         <div className={`${theme.primaryBg} text-white p-6 rounded-xl flex justify-between items-center shadow-md relative overflow-hidden`}>
           <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-32 h-32 bg-white/5 rounded-full pointer-events-none"></div>
           <div>
@@ -246,10 +237,8 @@ export default function MonthlyMatrixDashboard() {
           </div>
         </div>
 
-        {/* Two-Column Responsive Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           
-          {/* LEFT COLUMN: Week Audit Cards & Average Badge (4 Cols) */}
           <div className="lg:col-span-4 flex flex-col gap-3">
             {displayWeeks.map((wkNum) => {
               const wkInfo = weeksDataTemplate[wkNum - 1];
@@ -306,7 +295,6 @@ export default function MonthlyMatrixDashboard() {
               );
             })}
 
-            {/* Average Attendance Box */}
             <div className={`${theme.primaryBg} text-white p-4 rounded-xl shadow-md flex justify-between items-center mt-2 border border-emerald-700/40`}>
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200 block">Monthly Performance</span>
@@ -316,7 +304,6 @@ export default function MonthlyMatrixDashboard() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Grouped Matrix Table & Vision Box (8 Cols) */}
           <div className="lg:col-span-8 flex flex-col gap-4">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
               <table className="w-full text-left border-collapse text-xs font-medium">
@@ -367,7 +354,6 @@ export default function MonthlyMatrixDashboard() {
               </table>
             </div>
 
-            {/* Targets & Goals Footer */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-auto">
               <div className={`${theme.primaryBg} text-white p-4 rounded-xl flex justify-between items-center shadow-sm border border-emerald-700/40`}>
                 <div>
