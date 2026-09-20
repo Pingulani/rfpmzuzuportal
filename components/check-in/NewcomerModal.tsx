@@ -1,126 +1,140 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../utils/supabase';
-import { UserPlus, X, Save, Loader2, AlertCircle, Calendar } from 'lucide-react';
-
-const ZONES = [
-  'New Members', 'Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 
-  'MCA', 'Mzuzu Technical', 'MIT', 'MZUNI', 'UNILIA', 'MIJ', 
-  'Other Branches', 'Special Services', 'Unknown Zone'
-];
+import { X, Save, Loader2, AlertCircle, Calendar } from 'lucide-react';
 
 interface NewcomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (memberName: string) => void;
-  selectedServiceId?: string;
-  selectedServiceDate?: string;
-  selectedServiceType?: string;
+  onSuccess: () => void;
 }
 
-export default function NewcomerModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  selectedServiceId, 
-  selectedServiceDate, 
-  selectedServiceType 
-}: NewcomerModalProps) {
+export default function NewcomerModal({ isOpen, onClose, onSuccess }: NewcomerModalProps) {
+  // 1. Form State matching the paper form exactly
   const [fullName, setFullName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [gender, setGender] = useState('Male');
+  const [dob, setDob] = useState('');
+  const [gender, setGender] = useState('');
   const [residence, setResidence] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [emailAddress, setEmailAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [occupation, setOccupation] = useState('');
   
-  const [referralType, setReferralType] = useState<'friend' | 'other'>('friend');
-  const [friendName, setFriendName] = useState('');
-  const [otherReferral, setOtherReferral] = useState('');
-
-  const [facebookHandle, setFacebookHandle] = useState('');
-  const [twitterHandle, setTwitterHandle] = useState('');
-  const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [zone, setZone] = useState('New Members');
+  // Radio buttons for "How Did You Hear"
+  const [heardThrough, setHeardThrough] = useState<'Friend' | 'Other' | ''>('');
+  const [heardDetails, setHeardDetails] = useState('');
+  
+  // Socials
+  const [facebook, setFacebook] = useState('');
+  const [twitter, setTwitter] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  
+  // Tracking
+  const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+  const [availableServices, setAvailableServices] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 2. Fetch services for the dropdown
+  useEffect(() => {
+    if (!isOpen) return;
+    async function fetchServices() {
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, service_date, service_type')
+        .gte('service_date', startOfMonth)
+        .order('service_date', { ascending: true });
+      
+      if (!error && data) {
+        setAvailableServices(data);
+        if (data.length > 0) setSelectedServiceId(data[0].id);
+      }
+    }
+    fetchServices();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
+  // 3. Submit Handler sending to 'newcomers' table
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const nameParts = fullName.trim().split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-    const fullNameStr = fullName.trim();
-
     try {
-      const referralSource = referralType === 'friend' 
-        ? `Through a Friend: ${friendName}` 
-        : `Other: ${otherReferral}`;
+      // 1. Save rich details to the isolated 'newcomers' table
+      const { error: insertError } = await supabase
+        .from('newcomers')
+        .insert([{
+          full_name: fullName.trim(),
+          dob: dob || null,
+          gender: gender || null,
+          residence: residence.trim(),
+          phone_number: phone.trim() || null,
+          email_address: email.trim() || null,
+          occupation: occupation.trim(),
+          heard_through: heardThrough,
+          heard_details: heardDetails.trim(),
+          facebook: facebook.trim(),
+          twitter: twitter.trim(),
+          whatsapp: whatsapp.trim(),
+          visit_date: visitDate,
+          service_id: selectedServiceId || null
+        }]);
 
-      const todayStr = new Date().toISOString().split('T')[0];
+      if (insertError) throw new Error(`Newcomers Table: ${insertError.message}`);
 
-      // 1. Insert newcomer into members table
-      const { data: newMemberData, error: insertError } = await supabase
+      // 2. Dual-Write: Create a synced profile in the 'members' table
+      const nameParts = fullName.trim().split(' ');
+      const first = nameParts[0];
+      const last = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
+
+      // 🔴 FIX: Flood ALL category fields so the Matrix and Check-in buttons never crash on nulls
+      const { data: newMember, error: memberError } = await supabase
         .from('members')
         .insert([{
-          first_name: firstName,
-          last_name: lastName,
-          date_of_birth: dateOfBirth || null,
-          gender: gender,
-          residence: residence.trim(),
-          phone_number: phoneNumber.trim(),
-          email: emailAddress.trim(),
-          email_address: emailAddress.trim(),
-          occupation: occupation.trim(),
-          referral_source: referralSource,
-          facebook_handle: facebookHandle.trim(),
-          twitter_handle: twitterHandle.trim(),
-          whatsapp_number: whatsappNumber.trim(),
-          raw_category: zone,
+          first_name: first,
+          last_name: last,
+          phone_number: phone.trim() || null,
+          zone: 'New Members',         // Ensures manual check-in UI doesn't crash
+          category: 'New Members',     // Backup Matrix catch
+          raw_category: 'New Members', // Primary Matrix catch
+          raw_team: 'N/A',             // Prevents team-based null constraint errors
+          gender: gender || 'Unknown',
           member_status: 'Newcomer',
-          date_joined: todayStr
+          date_joined: visitDate
         }])
-        .select()
+        .select('id')
         .single();
 
-      if (insertError) throw insertError;
+      if (memberError) throw new Error(`Members Directory: ${memberError.message}`);
 
-      // 2. Explicitly auto-check-in newcomer to the selected service date & type
-      if (selectedServiceId && newMemberData) {
-        const { error: attError } = await supabase
+      // 3. Auto Check-in: Link to the 'attendance' table
+      if (selectedServiceId && newMember) {
+        const { error: attendanceError } = await supabase
           .from('attendance')
-          .insert([{ service_id: selectedServiceId, member_id: newMemberData.id }]);
+          .insert([{
+            service_id: selectedServiceId,
+            member_id: newMember.id
+            // Note: Removed JS check_in_time to let Postgres safely use default now()
+          }]);
 
-        if (attError) {
-          console.error("Error auto-checking in newcomer:", attError.message);
+        if (attendanceError) {
+          // Ignore unique constraint errors (23505) if they somehow double-click
+          if (attendanceError.code !== '23505') { 
+            throw new Error(`Attendance Check-in: ${attendanceError.message}`);
+          }
         }
       }
 
-      // Reset form
-      setFullName('');
-      setDateOfBirth('');
-      setGender('Male');
-      setResidence('');
-      setPhoneNumber('');
-      setEmailAddress('');
-      setOccupation('');
-      setFriendName('');
-      setOtherReferral('');
-      setFacebookHandle('');
-      setTwitterHandle('');
-      setWhatsappNumber('');
-      setZone('New Members');
-
-      onSuccess(fullNameStr);
+      onSuccess();
       onClose();
     } catch (err: any) {
+      console.error('Error saving newcomer:', err.message);
       setError(err.message || 'Failed to save newcomer.');
     } finally {
       setLoading(false);
@@ -128,217 +142,129 @@ export default function NewcomerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#e8e8e8] w-full max-w-2xl rounded shadow-2xl overflow-hidden flex flex-col max-h-[95vh] border-[6px] border-black p-2 relative">
         
-        {/* Header */}
-        <div className="bg-amber-700 px-6 py-4 flex justify-between items-center text-white">
-          <div>
-            <h2 className="text-xs md:text-sm font-black uppercase tracking-wider">Newcomer Registration Card</h2>
-            <p className="text-amber-100 text-[11px] font-semibold">Raised For A Purpose (RFP) Ministries</p>
+        <button onClick={onClose} className="absolute right-4 top-4 z-20 bg-gray-300 hover:bg-gray-400 p-1 rounded text-black">
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="overflow-y-auto bg-white border-[4px] border-black p-6 h-full">
+          
+          {/* Header */}
+          <div className="w-full text-center border-b-4 border-black pb-4 mb-6">
+            <h1 className="text-4xl font-black font-serif tracking-tight text-black">Welcome To</h1>
+            <h2 className="text-xl font-bold font-serif text-black mt-1">Raised For A Purpose (RFP) Ministries</h2>
           </div>
-          <button onClick={onClose} className="bg-amber-800/60 hover:bg-amber-800 p-1.5 rounded-lg transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 relative z-10">
+            {error && (
+              <div className="bg-red-50 text-red-700 p-3 rounded text-xs font-bold border border-red-200 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" /> {error}
+              </div>
+            )}
+
+            {/* Form Fields */}
+            <div className="flex flex-col gap-3">
+              <label className="text-base font-bold text-black flex items-end gap-2">
+                Full Name: 
+                <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium" />
+              </label>
+
+              <label className="text-base font-bold text-black flex items-end gap-2">
+                Date of Birth:
+                <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium" />
+              </label>
+
+              <label className="text-base font-bold text-black flex items-end gap-2">
+                Gender:
+                <select value={gender} onChange={(e) => setGender(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium">
+                  <option value=""></option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </label>
+
+              <label className="text-base font-bold text-black flex items-end gap-2">
+                Residence:
+                <input type="text" value={residence} onChange={(e) => setResidence(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium" />
+              </label>
+
+              <label className="text-base font-bold text-black flex items-end gap-2">
+                Phone Number:
+                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium" />
+              </label>
+
+              <label className="text-base font-bold text-black flex items-end gap-2">
+                Email Address:
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium" />
+              </label>
+
+              <label className="text-base font-bold text-black flex items-end gap-2">
+                Occupation/Educational Institution:
+                <input type="text" value={occupation} onChange={(e) => setOccupation(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium" />
+              </label>
+            </div>
+
+            {/* How Did You Hear Section */}
+            <div className="mt-6">
+              <h3 className="text-2xl font-black font-serif text-center text-black mb-4">How Did You Hear of RFP?</h3>
+              <div className="flex flex-col gap-4 pl-2">
+                <label className="flex items-center gap-3 text-base font-bold text-black cursor-pointer">
+                  <input type="radio" name="hearSource" checked={heardThrough === 'Friend'} onChange={() => setHeardThrough('Friend')} className="w-6 h-6 border-2 border-black accent-black" />
+                  Through a Friend? Name:
+                  <input type="text" disabled={heardThrough !== 'Friend'} value={heardThrough === 'Friend' ? heardDetails : ''} onChange={(e) => setHeardDetails(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium disabled:opacity-50" />
+                </label>
+                <label className="flex items-center gap-3 text-base font-bold text-black cursor-pointer">
+                  <input type="radio" name="hearSource" checked={heardThrough === 'Other'} onChange={() => setHeardThrough('Other')} className="w-6 h-6 border-2 border-black accent-black" />
+                  Other? Please Specify:
+                  <input type="text" disabled={heardThrough !== 'Other'} value={heardThrough === 'Other' ? heardDetails : ''} onChange={(e) => setHeardDetails(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium disabled:opacity-50" />
+                </label>
+              </div>
+            </div>
+
+            {/* Socials Using Text Labels to Avoid Lucide Errors */}
+            <div className="flex flex-col gap-4 pl-2 mt-4">
+              <label className="flex items-end gap-2 text-xl font-bold font-serif text-black">
+                f:
+                <input type="text" value={facebook} onChange={(e) => setFacebook(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-sans text-base font-medium" />
+              </label>
+              <label className="flex items-end gap-2 text-xl font-bold font-serif text-black">
+                X (Twitter):
+                <input type="text" value={twitter} onChange={(e) => setTwitter(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-sans text-base font-medium" />
+              </label>
+              <label className="flex items-end gap-2 text-xl font-bold font-serif text-black">
+                WhatsApp:
+                <input type="text" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-sans text-base font-medium" />
+              </label>
+            </div>
+
+            {/* Submit & Service Linkage */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-6 border-t-4 border-black">
+              <label className="text-base font-bold text-black flex items-end gap-2">
+                Current Date:
+                <input type="date" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} className="flex-1 border-b-[3px] border-dotted border-black bg-transparent focus:outline-none px-2 font-medium" />
+              </label>
+              
+              <label className="text-sm font-bold text-black flex items-center gap-2">
+                <Calendar className="w-5 h-5 shrink-0" /> Service Matrix Link:
+                <select value={selectedServiceId} onChange={(e) => setSelectedServiceId(e.target.value)} className="flex-1 border-2 border-black p-1 bg-gray-50 focus:outline-none font-medium text-xs">
+                  <option value="">-- Do Not Link --</option>
+                  {availableServices.map((s) => (
+                    <option key={s.id} value={s.id}>{s.service_date} ({s.service_type})</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button type="submit" disabled={loading} className="px-8 py-3 text-sm font-black uppercase text-white bg-black rounded flex items-center gap-2 hover:bg-gray-800 transition-colors">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                Submit Form
+              </button>
+            </div>
+          </form>
         </div>
-
-        {/* Active Service Target Badge */}
-        {selectedServiceDate && (
-          <div className="bg-amber-50 px-6 py-2.5 border-b border-amber-200 flex items-center gap-2 text-xs font-bold text-amber-900">
-            <Calendar className="w-4 h-4 text-amber-700" />
-            <span>Auto Check-in Target: <span className="font-black text-amber-950">{selectedServiceDate} ({selectedServiceType})</span></span>
-          </div>
-        )}
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
-          {error && (
-            <div className="bg-red-50 text-red-700 p-3 rounded-lg text-xs font-semibold border border-red-200 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" /> {error}
-            </div>
-          )}
-
-          <div>
-            <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Full Name</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. John Banda"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Date of Birth</label>
-              <input
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Gender</label>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-              >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Residence</label>
-              <input
-                type="text"
-                placeholder="e.g. Area 3, Mzuzu"
-                value={residence}
-                onChange={(e) => setResidence(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Phone Number</label>
-              <input
-                type="text"
-                placeholder="e.g. 0994135411"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Email Address</label>
-              <input
-                type="email"
-                placeholder="e.g. user@email.com"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Occupation / Educational Institution</label>
-              <input
-                type="text"
-                placeholder="e.g. MZUNI / Accountant"
-                value={occupation}
-                onChange={(e) => setOccupation(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 space-y-3">
-            <h3 className="text-xs font-black text-amber-900 uppercase tracking-wider">How Did You Hear of RFP?</h3>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-xs font-semibold text-gray-800 cursor-pointer">
-                <input 
-                  type="radio" 
-                  name="referral" 
-                  checked={referralType === 'friend'} 
-                  onChange={() => setReferralType('friend')}
-                  className="text-amber-600 focus:ring-amber-500"
-                />
-                Through a Friend? Name:
-              </label>
-              {referralType === 'friend' && (
-                <input
-                  type="text"
-                  placeholder="Enter friend's name"
-                  value={friendName}
-                  onChange={(e) => setFriendName(e.target.value)}
-                  className="w-full p-2 bg-white border border-amber-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none ml-6"
-                />
-              )}
-            </div>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-xs font-semibold text-gray-800 cursor-pointer">
-                <input 
-                  type="radio" 
-                  name="referral" 
-                  checked={referralType === 'other'} 
-                  onChange={() => setReferralType('other')}
-                  className="text-amber-600 focus:ring-amber-500"
-                />
-                Other? Please Specify:
-              </label>
-              {referralType === 'other' && (
-                <input
-                  type="text"
-                  placeholder="Please specify how you heard about us"
-                  value={otherReferral}
-                  onChange={(e) => setOtherReferral(e.target.value)}
-                  className="w-full p-2 bg-white border border-amber-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none ml-6"
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Facebook</label>
-              <input
-                type="text"
-                placeholder="Facebook handle"
-                value={facebookHandle}
-                onChange={(e) => setFacebookHandle(e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Twitter / X</label>
-              <input
-                type="text"
-                placeholder="Twitter handle"
-                value={twitterHandle}
-                onChange={(e) => setTwitterHandle(e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">WhatsApp</label>
-              <input
-                type="text"
-                placeholder="WhatsApp number"
-                value={whatsappNumber}
-                onChange={(e) => setWhatsappNumber(e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-black text-gray-700 uppercase tracking-wider block mb-1">Assigned Zone</label>
-            <select
-              value={zone}
-              onChange={(e) => setZone(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-amber-600 focus:outline-none"
-            >
-              {ZONES.map(z => <option key={z} value={z}>{z}</option>)}
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-2">
-            <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 text-xs font-bold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
-              Cancel
-            </button>
-            <button type="submit" disabled={loading} className="px-5 py-2.5 text-xs font-black text-white bg-amber-700 rounded-lg hover:bg-amber-800 flex items-center gap-2 shadow-md">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save & Auto Check-in
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );

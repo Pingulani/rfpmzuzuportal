@@ -3,8 +3,8 @@
 import { useState, useEffect, Fragment } from 'react';
 import { supabase } from '../../utils/supabase';
 import { getMonthlyZoneReport } from '../../services/monthlyReportService';
-import { Calendar, Users, BarChart3, Filter, ShieldCheck, AlertCircle, Download } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { Calendar, Users, Filter, Download, Sparkles } from 'lucide-react';
+import html2canvas from 'html2canvas-pro';
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
@@ -50,7 +50,6 @@ export default function MonthlyMatrixDashboard() {
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // States for the new Manual Inputs on the cards
   const [manualHeadcounts, setManualHeadcounts] = useState<Record<number, string>>({});
   const [manualSouls, setManualSouls] = useState<Record<number, string>>({});
   const [visionTarget, setVisionTarget] = useState('350');
@@ -80,29 +79,54 @@ export default function MonthlyMatrixDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [activeServiceType, selectedMonth, selectedYear]);
 
+  // Enhanced handleDownload to ensure all editable input fields render cleanly in the export
   const handleDownload = async () => {
     const element = document.getElementById('matrix-export-container');
     if (!element) return;
     try {
-      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#fefce8' });
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        backgroundColor: '#fefce8',
+        logging: false,
+        useCORS: true,
+        onclone: (clonedDoc) => {
+          // Mirror input values into text nodes for flawless canvas rendering
+          const clonedContainer = clonedDoc.getElementById('matrix-export-container');
+          if (clonedContainer) {
+            const inputs = clonedContainer.querySelectorAll('input');
+            inputs.forEach(input => {
+              const val = input.value;
+              const span = clonedDoc.createElement('span');
+              span.textContent = val || '0';
+              span.className = input.className;
+              span.style.display = 'inline-block';
+              span.style.textAlign = 'right';
+              if (input.parentNode) {
+                input.parentNode.replaceChild(span, input);
+              }
+            });
+          }
+        }
+      });
       const dataImage = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `Mzuzu_Branch_Zones_Matrix_${MONTHS[selectedMonth - 1]}_${selectedYear}.png`;
       link.href = dataImage;
       link.click();
     } catch (err) {
-      console.error('Failed to export image', err);
+      console.error('Failed to export image:', err);
+      alert('Export failed. Please check your browser console for details.');
     }
   };
 
   if (loading) {
     return (
-      <div className="w-full max-w-6xl bg-white p-6 rounded-xl shadow-xl border border-gray-200 animate-pulse">
-        <div className="h-16 bg-gray-200 rounded-lg mb-6"></div>
-        <div className="h-24 bg-gray-200 rounded-t-lg mb-1"></div>
-        <div className="space-y-2">
-          {[...Array(10)].map((_, i) => (
-            <div key={i} className="h-10 bg-gray-100 rounded"></div>
+      <div className="w-full max-w-7xl bg-white p-8 rounded-2xl shadow-xl border border-gray-100 animate-pulse flex flex-col gap-6">
+        <div className="h-20 bg-gray-100 rounded-xl"></div>
+        <div className="h-32 bg-gray-100 rounded-xl"></div>
+        <div className="space-y-3">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="h-12 bg-gray-50 rounded-lg"></div>
           ))}
         </div>
       </div>
@@ -122,21 +146,36 @@ export default function MonthlyMatrixDashboard() {
     return { weekNum: index + 1, serviceId, matchedRecords, dateStr };
   });
 
+  // 🔴 UPDATED & BULLETPROOF ZONE MATCHER
   const isZoneMatch = (dbCat: string, targetZone: string) => {
     const target = targetZone.trim().toLowerCase();
     const db = dbCat ? dbCat.trim().toLowerCase() : ''; 
     
+    // 1. Direct exact match (Catches perfectly spelled "Zone 1", "New Members", etc.)
     if (db === target) return true;
-    if (target === 'other branches' && db.startsWith('other branches')) return true;
-    if (target === 'new members' && db === 'new members') return true;
-    if (target === 'unknown zone or not in a zone' && (db === '' || db === 'unknown zone')) return true;
+    
+    // 2. Wide net for New Members historical data
+    // Catches "new members", "new member", "newcomer", etc. without breaking other zones
+    if (target === 'new members' && (db.includes('new member') || db.includes('newcomer'))) {
+      return true;
+    }
+
+    // 3. Wide net for Other Branches
+    if (target === 'other branches' && (db.includes('other branch') || db.includes('visiting'))) {
+      return true;
+    }
+
+    // 4. Catch-all for unknown or empty categories
+    if (target === 'unknown zone or not in a zone' && (db === '' || db.includes('unknown') || db.includes('not in a zone') || db === 'n/a')) {
+      return true;
+    }
     
     return false;
   };
 
   const theme = activeServiceType === 'Sunday Service' 
-    ? { primaryBg: 'bg-[#034a36]', secondaryBg: 'bg-[#023325]' }
-    : { primaryBg: 'bg-indigo-900', secondaryBg: 'bg-indigo-950' };
+    ? { primaryBg: 'bg-[#034a36]', secondaryBg: 'bg-[#023325]', accentBorder: 'border-emerald-800' }
+    : { primaryBg: 'bg-indigo-900', secondaryBg: 'bg-indigo-950', accentBorder: 'border-indigo-800' };
 
   // UI calculations
   const displayWeeks = [1, 2, 3, 4, 5];
@@ -149,107 +188,116 @@ export default function MonthlyMatrixDashboard() {
     : '0.0';
 
   return (
-    <div className="w-full max-w-7xl flex flex-col gap-4">
+    <div className="w-full max-w-7xl flex flex-col gap-5">
       
-      {/* Top Controls with Micro-Interactions (Non-printable) */}
-      <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      {/* Top Controls Bar */}
+      <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
         <div className="flex gap-2">
           <button 
             onClick={() => setActiveServiceType('Sunday Service')} 
-            className={`px-4 py-2 text-xs font-black uppercase rounded-lg transition-all duration-200 flex items-center gap-1.5 ${activeServiceType === 'Sunday Service' ? `${theme.primaryBg} text-white shadow-md scale-[1.02]` : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            className={`px-4 py-2.5 text-xs font-black uppercase rounded-xl transition-all duration-200 flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? `${theme.primaryBg} text-white shadow-md scale-[1.02]` : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
-            <Calendar className="w-3.5 h-3.5" /> Sun Services
+            <Calendar className="w-4 h-4" /> Sunday Services
           </button>
           <button 
             onClick={() => setActiveServiceType('Midweek Service')} 
-            className={`px-4 py-2 text-xs font-black uppercase rounded-lg transition-all duration-200 flex items-center gap-1.5 ${activeServiceType === 'Midweek Service' ? `${theme.primaryBg} text-white shadow-md scale-[1.02]` : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            className={`px-4 py-2.5 text-xs font-black uppercase rounded-xl transition-all duration-200 flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? `${theme.primaryBg} text-white shadow-md scale-[1.02]` : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
-            <Users className="w-3.5 h-3.5" /> Midweek Services
+            <Users className="w-4 h-4" /> Midweek Services
           </button>
         </div>
-        <div className="flex gap-2">
-          <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className={`p-2 text-sm font-bold bg-white border border-gray-300 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:outline-none transition-all`}>
+        <div className="flex items-center gap-2">
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="p-2.5 text-xs font-black uppercase bg-gray-50 border border-gray-300 text-gray-800 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none">
             {MONTHS.map((m, idx) => (<option key={m} value={idx + 1}>{m}</option>))}
           </select>
-          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className={`p-2 text-sm font-bold bg-white border border-gray-300 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:outline-none transition-all`}>
+          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="p-2.5 text-xs font-black uppercase bg-gray-50 border border-gray-300 text-gray-800 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none">
             {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
           </select>
           <button 
             onClick={handleDownload} 
-            className={`px-4 py-2 text-xs font-black uppercase rounded-lg transition-all duration-200 flex items-center gap-1.5 ${theme.primaryBg} text-white shadow-sm hover:opacity-90`}
+            className={`px-4 py-2.5 text-xs font-black uppercase rounded-xl transition-all duration-200 flex items-center gap-2 bg-emerald-800 text-white shadow-md hover:bg-emerald-900`}
           >
-            <Download className="w-4 h-4" /> Export Report
+            <Download className="w-4 h-4" /> Export PNG
           </button>
         </div>
       </div>
 
-      {/* Wrapping the visual elements we want exported as an image */}
-      <div id="matrix-export-container" className="bg-[#fefce8] p-4 md:p-6 rounded-lg w-full flex flex-col gap-4 font-sans text-gray-900 border border-yellow-100">
+      {/* Printable / Exportable Container */}
+      <div id="matrix-export-container" className="bg-[#fefce8] p-5 md:p-8 rounded-2xl w-full flex flex-col gap-6 font-sans text-gray-900 border border-yellow-200 shadow-xl">
         
-        {/* Styled Header */}
-        <div className={`${theme.primaryBg} text-white p-5 rounded-lg flex justify-between items-center shadow-sm`}>
+        {/* Executive Header Banner */}
+        <div className={`${theme.primaryBg} text-white p-6 rounded-xl flex justify-between items-center shadow-md relative overflow-hidden`}>
+          <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-32 h-32 bg-white/5 rounded-full pointer-events-none"></div>
           <div>
-            <h1 className="text-2xl font-black tracking-widest uppercase">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-[#facc15]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Executive Ministry Report</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black tracking-wider uppercase">
               MZUZU BRANCH
             </h1>
-            <h2 className="text-[#facc15] text-xs font-bold tracking-wider mt-1">
-              {MONTHS[selectedMonth - 1]} {selectedYear} — {activeServiceType.toUpperCase()} ZONES REPORT
+            <h2 className="text-[#facc15] text-xs font-black tracking-widest mt-1">
+              {MONTHS[selectedMonth - 1].toUpperCase()} {selectedYear} — {activeServiceType.toUpperCase()} ZONES MATRIX
             </h2>
           </div>
-          <div className="text-[10px] font-semibold text-gray-200">
-            Generated: {new Date().toLocaleDateString('en-GB')}
+          <div className="text-right">
+            <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider block">Generated Date</span>
+            <span className="text-xs font-black text-white">{new Date().toLocaleDateString('en-GB')}</span>
           </div>
         </div>
 
-        {/* Two-Column Layout */}
-        <div className="flex flex-col lg:flex-row gap-4">
+        {/* Two-Column Responsive Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           
-          {/* LEFT COLUMN: Week Cards & Average */}
-          <div className="w-full lg:w-1/3 flex flex-col gap-3">
+          {/* LEFT COLUMN: Week Audit Cards & Average Badge (4 Cols) */}
+          <div className="lg:col-span-4 flex flex-col gap-3">
             {displayWeeks.map((wkNum) => {
               const wkInfo = weeksDataTemplate[wkNum - 1];
               const registeredCount = wkInfo?.serviceId ? wkInfo.matchedRecords.length : 0;
               const hc = Number(manualHeadcounts[wkNum]) || 0;
               const variance = hc > 0 ? hc - registeredCount : 0;
-              const dateDisplay = wkInfo?.dateStr ? wkInfo.dateStr : 'N/A';
+              const dateDisplay = wkInfo?.dateStr ? wkInfo.dateStr : 'No Service Scheduled';
               const isAvailable = !!wkInfo;
 
               return (
-                <div key={wkNum} className={`bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden text-xs ${!isAvailable && 'opacity-60 grayscale'}`}>
-                  <div className="bg-[#2563eb] text-white px-3 py-1.5 flex justify-between items-center font-bold">
-                    <span className="uppercase tracking-wider">WEEK {wkNum}</span>
-                    <span className="text-[10px]">{dateDisplay}</span>
+                <div key={wkNum} className={`bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden text-xs transition-all ${!isAvailable && 'opacity-50 grayscale bg-gray-50'}`}>
+                  <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white px-4 py-2 flex justify-between items-center font-black">
+                    <span className="tracking-wider flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                      WEEK {wkNum}
+                    </span>
+                    <span className="text-[10px] font-semibold text-blue-200 font-mono">{dateDisplay}</span>
                   </div>
-                  <div className="p-3 space-y-2">
-                    <div className="flex justify-between items-center font-black text-sm pb-2 border-b border-gray-100">
-                      <span className="text-gray-600">HEADCOUNT</span>
+                  <div className="p-3.5 space-y-2.5">
+                    <div className="flex justify-between items-center font-black text-sm pb-2.5 border-b border-gray-100">
+                      <span className="text-gray-500 font-bold uppercase text-[11px]">Headcount</span>
                       <input 
                         type="number"
                         value={manualHeadcounts[wkNum] || ''}
                         onChange={(e) => setManualHeadcounts(prev => ({...prev, [wkNum]: e.target.value}))}
-                        className="w-16 text-right font-black text-lg focus:outline-none bg-transparent"
+                        className="w-20 text-right font-black text-base text-gray-900 bg-gray-50 hover:bg-gray-100 focus:bg-white border border-gray-200 rounded-lg p-1 focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all"
                         placeholder="0"
                         disabled={!isAvailable}
                       />
                     </div>
-                    <div className="flex justify-between items-center text-gray-600 font-bold">
-                      <span>Registered</span>
-                      <span className="text-gray-900">{registeredCount}</span>
+                    <div className="flex justify-between items-center text-gray-600 font-semibold px-1">
+                      <span className="text-xs">System Registered</span>
+                      <span className="font-bold text-gray-900 font-mono">{registeredCount}</span>
                     </div>
-                    <div className="flex justify-between items-center text-gray-600 font-bold">
-                      <span>Souls Won</span>
+                    <div className="flex justify-between items-center text-gray-600 font-semibold px-1">
+                      <span className="text-xs">Souls Won</span>
                       <input 
                         type="number"
                         value={manualSouls[wkNum] || ''}
                         onChange={(e) => setManualSouls(prev => ({...prev, [wkNum]: e.target.value}))}
-                        className="w-12 text-right text-red-600 font-black focus:outline-none bg-transparent"
+                        className="w-14 text-right text-red-600 font-black bg-gray-50 hover:bg-gray-100 focus:bg-white border border-gray-200 rounded-lg p-1 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none transition-all"
                         placeholder="0"
                         disabled={!isAvailable}
                       />
                     </div>
-                    <div className="flex justify-between items-center text-gray-600 font-bold pt-1">
-                      <span>Variance (Headcount - Reg.)</span>
-                      <span className={`font-black ${variance > 0 ? 'text-green-600' : variance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    <div className="flex justify-between items-center font-bold px-1 pt-1 border-t border-gray-100 text-[11px]">
+                      <span className="text-gray-500 uppercase">Variance</span>
+                      <span className={`font-black font-mono px-2 py-0.5 rounded ${variance > 0 ? 'bg-emerald-50 text-emerald-700' : variance < 0 ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
                         {variance > 0 ? `+${variance}` : variance}
                       </span>
                     </div>
@@ -258,36 +306,38 @@ export default function MonthlyMatrixDashboard() {
               );
             })}
 
-            <div className={`${theme.primaryBg} text-white p-4 rounded-md shadow-sm flex justify-between items-center mt-auto`}>
-              <span className="font-bold text-sm tracking-wider uppercase">AVERAGE ATT.</span>
-              <span className="text-[#facc15] font-black text-3xl">{avgAttendance}</span>
+            {/* Average Attendance Box */}
+            <div className={`${theme.primaryBg} text-white p-4 rounded-xl shadow-md flex justify-between items-center mt-2 border border-emerald-700/40`}>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200 block">Monthly Performance</span>
+                <span className="font-black text-sm tracking-wider uppercase">Average Attendance</span>
+              </div>
+              <span className="text-[#facc15] font-black text-3xl font-mono bg-black/20 px-3 py-1 rounded-lg border border-yellow-500/30">{avgAttendance}</span>
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Table & Vision Box */}
-          <div className="w-full lg:w-2/3 flex flex-col gap-4">
-            <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
-              <table className="w-full text-left border-collapse text-[11px] font-bold">
+          {/* RIGHT COLUMN: Grouped Matrix Table & Vision Box (8 Cols) */}
+          <div className="lg:col-span-8 flex flex-col gap-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 overflow-hidden">
+              <table className="w-full text-left border-collapse text-xs font-medium">
                 <thead>
-                  <tr className="text-[#034a36] border-b-2 border-gray-200">
-                    <th className="py-3 px-4 uppercase tracking-wider">ZONE / CATEGORY</th>
+                  <tr className="bg-gray-900 text-white border-b border-gray-800 text-[11px]">
+                    <th className="py-3 px-4 uppercase tracking-wider font-black">ZONE / CATEGORY</th>
                     {displayWeeks.map(wk => (
-                      <th key={wk} className="py-3 px-2 text-center uppercase tracking-wider">WK{wk}</th>
+                      <th key={wk} className="py-3 px-2 text-center uppercase tracking-wider font-black w-12">WK{wk}</th>
                     ))}
-                    <th className="py-3 px-3 text-center bg-[#fef08a] uppercase tracking-wider">AVG</th>
+                    <th className="py-3 px-3 text-center bg-[#fef08a] text-gray-900 uppercase tracking-wider font-black w-14">AVG</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-gray-700">
+                <tbody className="divide-y divide-gray-100">
                   {ZONE_CATEGORIES.map((group, gIdx) => (
                     <Fragment key={gIdx}>
-                      {/* Group Header to retain your original grouping structure visually */}
-                      <tr className="bg-gray-50/50 border-b-2 border-gray-200 text-[#034a36] text-[10px] font-black uppercase tracking-wider">
+                      <tr className="bg-gray-100/80 border-y border-gray-200 text-[#034a36] text-[10px] font-black uppercase tracking-wider">
                         <td colSpan={7} className="py-2.5 px-4">
                           <div className="flex items-center gap-1.5"><Filter className="w-3 h-3 opacity-70" /> {group.groupName}</div>
                         </td>
                       </tr>
                       {group.zones.map((zoneName, zIdx) => {
-                        
                         const weeklyCounts = displayWeeks.map((wkIndex) => {
                           if (wkIndex > weekNumbersArray.length) return null;
                           const wkInfo = weeksDataTemplate[wkIndex - 1];
@@ -300,14 +350,14 @@ export default function MonthlyMatrixDashboard() {
                         const avg = totalAttended > 0 ? Math.round(totalAttended / activeWeeksCount) : 0;
 
                         return (
-                          <tr key={zIdx} className="hover:bg-gray-50 transition-colors border-b border-gray-100 text-[11px] font-medium text-gray-800">
-                            <td className="py-2.5 px-4 font-semibold text-gray-900">{zoneName}</td>
+                          <tr key={zIdx} className="hover:bg-gray-50/80 transition-colors border-b border-gray-100 text-gray-800">
+                            <td className="py-3 px-4 font-bold text-gray-900">{zoneName}</td>
                             {weeklyCounts.map((count, wIdx) => (
-                              <td key={wIdx} className="py-2.5 px-2 text-center">
-                                {count === null ? <span className="text-gray-300">-</span> : count > 0 ? count : <span className="text-gray-300">0</span>}
+                              <td key={wIdx} className="py-3 px-2 text-center font-mono font-semibold">
+                                {count === null ? <span className="text-gray-300">-</span> : count > 0 ? <span className="text-gray-900 font-bold">{count}</span> : <span className="text-gray-300">0</span>}
                               </td>
                             ))}
-                            <td className="py-2.5 px-3 text-center bg-[#fef08a] font-black text-gray-900">{avg}</td>
+                            <td className="py-3 px-3 text-center bg-[#fef08a]/60 font-black text-gray-900 font-mono">{avg}</td>
                           </tr>
                         );
                       })}
@@ -317,22 +367,29 @@ export default function MonthlyMatrixDashboard() {
               </table>
             </div>
 
-            {/* Targets Footer */}
-            <div className="flex flex-col gap-2 mt-auto">
-              <div className={`${theme.primaryBg} text-white p-3.5 rounded-md flex justify-between items-center shadow-sm`}>
-                <span className="font-bold text-sm tracking-wider uppercase">VISION 100% TARGET</span>
+            {/* Targets & Goals Footer */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-auto">
+              <div className={`${theme.primaryBg} text-white p-4 rounded-xl flex justify-between items-center shadow-sm border border-emerald-700/40`}>
+                <div>
+                  <span className="text-[10px] font-black tracking-wider text-emerald-200 uppercase block">Strategic Goal</span>
+                  <span className="font-bold text-xs uppercase">Vision 100% Target</span>
+                </div>
                 <input 
                   type="number"
                   value={visionTarget}
                   onChange={(e) => setVisionTarget(e.target.value)}
-                  className="w-24 bg-transparent text-right text-[#facc15] font-black text-xl focus:outline-none"
+                  className="w-24 bg-black/20 border border-yellow-500/30 text-right text-[#facc15] font-black text-xl rounded-lg p-1.5 focus:outline-none font-mono"
                 />
               </div>
-              <div className={`${theme.primaryBg} text-white p-3.5 rounded-md flex justify-between items-center shadow-sm`}>
-                <span className="font-bold text-sm tracking-wider uppercase">ACHIEVED %</span>
-                <span className="text-[#facc15] font-black text-xl">{achievedPercent}%</span>
+              <div className={`${theme.primaryBg} text-white p-4 rounded-xl flex justify-between items-center shadow-sm border border-emerald-700/40`}>
+                <div>
+                  <span className="text-[10px] font-black tracking-wider text-emerald-200 uppercase block">Milestone Status</span>
+                  <span className="font-bold text-xs uppercase">Achieved Rate</span>
+                </div>
+                <span className="text-[#facc15] font-black text-2xl font-mono bg-black/20 px-3 py-1 rounded-lg border border-yellow-500/30">{achievedPercent}%</span>
               </div>
             </div>
+
           </div>
         </div>
       </div>
