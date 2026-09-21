@@ -28,14 +28,16 @@ export default function LoginPage() {
       if (!authData.user) throw new Error('Authentication failed');
 
       // 2. Fetch the user's role to determine where to send them
-      const { data: roleData, error: roleError } = await supabase
+    const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('id', authData.user.id)
         .single();
 
-      if (roleError && roleError.code !== 'PGRST116') {
-        throw new Error('Failed to verify user permissions.');
+// 🔴 FIX: This will print the exact reason Supabase is failing
+if (roleError && roleError.code !== 'PGRST116') {
+  throw new Error(`DB Error: ${roleError.message} (Code: ${roleError.code})`);
+}
       }
 
       const userRole = roleData?.role || 'unassigned';
