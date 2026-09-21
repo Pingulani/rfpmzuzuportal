@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'navigation'; // Adjust to 'next/navigation' for App Router, or 'next/router' for Pages router
+import { useRouter } from 'next/navigation'; // Adjust to 'next/navigation' for App Router, or 'next/router' for Pages router
 import { supabase } from '../../utils/supabase'; // Adjust path if necessary
 import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
 
