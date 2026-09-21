@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Adjust to 'next/navigation' for App Router, or 'next/router' for Pages router
-import { supabase } from '../../utils/supabase'; // Adjust path if necessary
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../utils/supabase';
 import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -28,25 +28,24 @@ export default function LoginPage() {
       if (!authData.user) throw new Error('Authentication failed');
 
       // 2. Fetch the user's role to determine where to send them
-    const { data: roleData, error: roleError } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('id', authData.user.id)
         .single();
 
-// 🔴 FIX: This will print the exact reason Supabase is failing
-if (roleError && roleError.code !== 'PGRST116') {
-  throw new Error(`DB Error: ${roleError.message} (Code: ${roleError.code})`);
-}
+      // 🔴 FIX: This will print the exact reason Supabase is failing
+      if (roleError && roleError.code !== 'PGRST116') {
+        throw new Error(`DB Error: ${roleError.message} (Code: ${roleError.code})`);
       }
 
       const userRole = roleData?.role || 'unassigned';
 
       // 3. Route based on role
       if (userRole === 'admin' || userRole === 'access_control') {
-        router.push('/'); // Or your main dashboard/check-in route
+        router.push('/'); 
       } else if (userRole === 'leader') {
-        router.push('/zones-matrix'); // Push leaders directly to reports
+        router.push('/zones-matrix'); 
       } else {
         throw new Error('No role assigned. Please contact the administrator.');
       }
