@@ -56,7 +56,6 @@ export default function MonthlyMatrixDashboard() {
 
   const [visionTarget, setVisionTarget] = useState('350');
 
-  // Load data from Supabase on change
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -68,7 +67,7 @@ export default function MonthlyMatrixDashboard() {
 
     const channel = supabase
       .channel('zones-matrix-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, async () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, async () => {
         const data = await getMonthlyZoneReport(selectedYear, selectedMonth, activeServiceType);
         setReportData(data);
       })
@@ -100,7 +99,6 @@ export default function MonthlyMatrixDashboard() {
     }
   }, [reportData]);
 
-  // Save Headcount directly to Supabase backend
   const handleHeadcountChange = async (wkNum: number, val: string) => {
     const updated = { ...manualHeadcounts, [wkNum]: val };
     setManualHeadcounts(updated);
@@ -115,7 +113,6 @@ export default function MonthlyMatrixDashboard() {
       .eq('id', wkInfo.serviceId);
   };
 
-  // Save Souls Won directly to Supabase backend
   const handleSoulsChange = async (wkNum: number, val: string) => {
     const updated = { ...manualSouls, [wkNum]: val };
     setManualSouls(updated);
@@ -189,7 +186,7 @@ export default function MonthlyMatrixDashboard() {
   
   const displayWeeks = [1, 2, 3, 4, 5];
 
-  // Robust mapping using database 'week_number' with calendar date fallback
+  // RESTORED: Robust week mapping + pulling registered attendance records per service ID
   const weeksDataTemplate = displayWeeks.map((wkNum) => {
     const matchedService = services.find((s: any) => 
       s.service_type?.trim().toLowerCase() === activeServiceType.toLowerCase() &&
