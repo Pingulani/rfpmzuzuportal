@@ -51,39 +51,12 @@ export default function MonthlyMatrixDashboard() {
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  const [manualHeadcounts, setManualHeadcounts] = useState<Record<number, string>>(() => {
-    if (typeof window === 'undefined') return {};
-    const saved = localStorage.getItem(`mzuzu_hc_${selectedYear}_${selectedMonth}_${activeServiceType}`);
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  const [manualSouls, setManualSouls] = useState<Record<number, string>>(() => {
-    if (typeof window === 'undefined') return {};
-    const saved = localStorage.getItem(`mzuzu_souls_${selectedYear}_${selectedMonth}_${activeServiceType}`);
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [manualHeadcounts, setManualHeadcounts] = useState<Record<number, string>>({});
+  const [manualSouls, setManualSouls] = useState<Record<number, string>>({});
 
   const [visionTarget, setVisionTarget] = useState('350');
 
-  useEffect(() => {
-    const savedHc = localStorage.getItem(`mzuzu_hc_${selectedYear}_${selectedMonth}_${activeServiceType}`);
-    const savedSouls = localStorage.getItem(`mzuzu_souls_${selectedYear}_${selectedMonth}_${activeServiceType}`);
-    setManualHeadcounts(savedHc ? JSON.parse(savedHc) : {});
-    setManualSouls(savedSouls ? JSON.parse(savedSouls) : {});
-  }, [selectedMonth, selectedYear, activeServiceType]);
-
-  const handleHeadcountChange = (wkNum: number, val: string) => {
-    const updated = { ...manualHeadcounts, [wkNum]: val };
-    setManualHeadcounts(updated);
-    localStorage.setItem(`mzuzu_hc_${selectedYear}_${selectedMonth}_${activeServiceType}`, JSON.stringify(updated));
-  };
-
-  const handleSoulsChange = (wkNum: number, val: string) => {
-    const updated = { ...manualSouls, [wkNum]: val };
-    setManualSouls(updated);
-    localStorage.setItem(`mzuzu_souls_${selectedYear}_${selectedMonth}_${activeServiceType}`, JSON.stringify(updated));
-  };
-
+  // Load data from Supabase on change
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -95,7 +68,7 @@ export default function MonthlyMatrixDashboard() {
 
     const channel = supabase
       .channel('zones-matrix-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, async () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, async () => {
         const data = await getMonthlyZoneReport(selectedYear, selectedMonth, activeServiceType);
         setReportData(data);
       })
@@ -103,6 +76,59 @@ export default function MonthlyMatrixDashboard() {
 
     return () => { supabase.removeChannel(channel); };
   }, [activeServiceType, selectedMonth, selectedYear]);
+
+  // Sync manual inputs directly from database report data upon load/refresh
+  useEffect(() => {
+    if (reportData && reportData.services) {
+      const dbHeadcounts: Record<number, string> = {};
+      const dbSouls: Record<number, string> = {};
+      
+      reportData.services.forEach((service: any) => {
+        const wkNum = service.week_number;
+        if (wkNum) {
+          if (service.manual_headcount !== null && service.manual_headcount !== undefined) {
+            dbHeadcounts[wkNum] = String(service.manual_headcount);
+          }
+          if (service.manual_souls !== null && service.manual_souls !== undefined) {
+            dbSouls[wkNum] = String(service.manual_souls);
+          }
+        }
+      });
+
+      setManualHeadcounts(dbHeadcounts);
+      setManualSouls(dbSouls);
+    }
+  }, [reportData]);
+
+  // Save Headcount directly to Supabase backend
+  const handleHeadcountChange = async (wkNum: number, val: string) => {
+    const updated = { ...manualHeadcounts, [wkNum]: val };
+    setManualHeadcounts(updated);
+
+    const wkInfo = weeksDataTemplate[wkNum - 1];
+    if (!wkInfo || !wkInfo.serviceId) return;
+
+    const numericVal = val === '' ? 0 : Number(val);
+    await supabase
+      .from('services')
+      .update({ manual_headcount: numericVal })
+      .eq('id', wkInfo.serviceId);
+  };
+
+  // Save Souls Won directly to Supabase backend
+  const handleSoulsChange = async (wkNum: number, val: string) => {
+    const updated = { ...manualSouls, [wkNum]: val };
+    setManualSouls(updated);
+
+    const wkInfo = weeksDataTemplate[wkNum - 1];
+    if (!wkInfo || !wkInfo.serviceId) return;
+
+    const numericVal = val === '' ? 0 : Number(val);
+    await supabase
+      .from('services')
+      .update({ manual_souls: numericVal })
+      .eq('id', wkInfo.serviceId);
+  };
 
   const handleDownload = async () => {
     const element = document.getElementById('matrix-export-container');
@@ -160,15 +186,40 @@ export default function MonthlyMatrixDashboard() {
 
   const targetDayOfWeek = activeServiceType === 'Sunday Service' ? 0 : 3;
   const calendarDates = getCalendarDatesForMonth(selectedYear, selectedMonth, targetDayOfWeek);
-  const weekNumbersArray = calendarDates.map((_, i) => i + 1);
+  
+  const displayWeeks = [1, 2, 3, 4, 5];
 
-  const weeksDataTemplate = calendarDates.map((dateStr, index) => {
-    const matchedServices = services.filter((s: any) => s.service_date?.trim() === dateStr.trim());
-    const serviceIds = matchedServices.map((s: any) => s.id);
-    const matchedRecords = serviceIds.length > 0 
-      ? attendanceRecords.filter((r: any) => serviceIds.includes(r.service_id)) 
+  // Robust mapping using database 'week_number' with calendar date fallback
+  const weeksDataTemplate = displayWeeks.map((wkNum) => {
+    const matchedService = services.find((s: any) => 
+      s.service_type?.trim().toLowerCase() === activeServiceType.toLowerCase() &&
+      Number(s.week_number) === wkNum
+    );
+
+    let dateStr = '';
+    let serviceId = matchedService?.id || null;
+
+    if (!matchedService) {
+      dateStr = calendarDates[wkNum - 1] || '';
+      const fallbackService = services.find((s: any) => 
+        s.service_type?.trim().toLowerCase() === activeServiceType.toLowerCase() &&
+        s.service_date?.trim().split('T')[0] === dateStr
+      );
+      serviceId = fallbackService?.id || null;
+    } else {
+      dateStr = matchedService.service_date?.trim().split('T')[0] || '';
+    }
+
+    const matchedRecords = serviceId 
+      ? attendanceRecords.filter((r: any) => r.service_id === serviceId) 
       : [];
-    return { weekNum: index + 1, serviceId: serviceIds[0] || null, matchedRecords, dateStr };
+
+    return { 
+      weekNum: wkNum, 
+      serviceId, 
+      matchedRecords, 
+      dateStr 
+    };
   });
 
   const isZoneMatch = (dbCat: string, targetZone: string) => {
@@ -188,7 +239,6 @@ export default function MonthlyMatrixDashboard() {
     ? { primaryBg: 'bg-[#034a36]', secondaryBg: 'bg-[#023325]', accentBorder: 'border-emerald-800' }
     : { primaryBg: 'bg-indigo-900', secondaryBg: 'bg-indigo-950', accentBorder: 'border-indigo-800' };
 
-  const displayWeeks = [1, 2, 3, 4, 5];
   const enteredHeadcounts = Object.values(manualHeadcounts).map(Number).filter(n => n > 0);
   const avgAttendance = enteredHeadcounts.length > 0 
     ? Math.round(enteredHeadcounts.reduce((a, b) => a + b, 0) / enteredHeadcounts.length) 
@@ -262,10 +312,10 @@ export default function MonthlyMatrixDashboard() {
               const hc = Number(manualHeadcounts[wkNum]) || 0;
               const variance = hc > 0 ? hc - registeredCount : 0;
               const dateDisplay = wkInfo?.dateStr ? wkInfo.dateStr : 'No Service Scheduled';
-              const isAvailable = !!wkInfo;
+              const isAvailable = !!wkInfo?.serviceId;
 
               return (
-                <div key={wkNum} className={`bg-white rounded-lg shadow-sm border border-gray-200/80 overflow-hidden transition-all ${!isAvailable && 'opacity-50 grayscale bg-gray-50'}`}>
+                <div key={wkNum} className={`bg-white rounded-lg shadow-sm border border-gray-200/80 overflow-hidden transition-all ${!isAvailable && 'opacity-60 bg-gray-50'}`}>
                   <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white px-3 py-1.5 flex justify-between items-center font-black">
                     <span className="tracking-wider flex items-center gap-1.5 text-sm">
                       <span className="w-2 h-2 rounded-full bg-blue-400"></span>
@@ -282,7 +332,6 @@ export default function MonthlyMatrixDashboard() {
                         onChange={(e) => handleHeadcountChange(wkNum, e.target.value)}
                         className="w-20 text-right font-black text-lg text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded p-0.5 focus:ring-2 focus:outline-none transition-all"
                         placeholder="0"
-                        disabled={!isAvailable}
                       />
                     </div>
                     <div className="flex justify-between items-center text-gray-700 px-1">
@@ -297,7 +346,6 @@ export default function MonthlyMatrixDashboard() {
                         onChange={(e) => handleSoulsChange(wkNum, e.target.value)}
                         className="w-14 text-right text-red-600 font-black text-sm bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded p-0.5 focus:outline-none transition-all"
                         placeholder="0"
-                        disabled={!isAvailable}
                       />
                     </div>
                     <div className="flex justify-between items-center font-bold px-1 pt-1.5 border-t border-gray-100 text-xs">
@@ -342,13 +390,12 @@ export default function MonthlyMatrixDashboard() {
                       </tr>
                       {group.zones.map((zoneName, zIdx) => {
                         const weeklyCounts = displayWeeks.map((wkIndex) => {
-                          if (wkIndex > weekNumbersArray.length) return null;
                           const wkInfo = weeksDataTemplate[wkIndex - 1];
                           if (!wkInfo || !wkInfo.serviceId) return 0;
                           return wkInfo.matchedRecords.filter((r: any) => isZoneMatch(r.members?.raw_category, zoneName)).length;
                         });
 
-                        const activeWeeksCount = weeklyCounts.filter(c => c !== null && c > 0).length || 1;
+                        const activeWeeksCount = weeklyCounts.filter(c => c > 0).length || 1;
                         const totalAttended = weeklyCounts.reduce((sum, val) => sum + (val || 0), 0);
                         const avg = totalAttended > 0 ? Math.round(totalAttended / activeWeeksCount) : 0;
 
@@ -357,7 +404,7 @@ export default function MonthlyMatrixDashboard() {
                             <td className="py-1.5 px-3 font-bold text-sm text-gray-900">{zoneName}</td>
                             {weeklyCounts.map((count, wIdx) => (
                               <td key={wIdx} className="py-1.5 px-2 text-center font-mono font-bold text-sm">
-                                {count === null ? <span className="text-gray-300">-</span> : count > 0 ? <span className="text-gray-900 font-black">{count}</span> : <span className="text-gray-300">0</span>}
+                                {count > 0 ? <span className="text-gray-900 font-black">{count}</span> : <span className="text-gray-300">0</span>}
                               </td>
                             ))}
                             <td className="py-1.5 px-3 text-center bg-[#fef08a]/60 font-black text-gray-900 text-sm font-mono">{avg}</td>
