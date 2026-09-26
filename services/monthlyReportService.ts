@@ -6,7 +6,7 @@ export async function getMonthlyZoneReport(year: number, month: number, serviceT
     const lastDay = new Date(year, month, 0).getDate();
     const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
 
-    // 1. Fetch services for the month
+    // 1. Fetch all services for the selected month & type
     const { data: servicesData, error: servicesError } = await supabase
       .from('services')
       .select('*')
@@ -14,14 +14,12 @@ export async function getMonthlyZoneReport(year: number, month: number, serviceT
       .gte('service_date', startDate)
       .lte('service_date', endDate);
 
-    if (servicesError) {
-      console.error('Supabase Services Error:', servicesError.message);
-      throw servicesError;
-    }
+    if (servicesError) throw servicesError;
 
+    // Gather all service IDs
     const serviceIds = (servicesData || []).map((s: any) => s.id);
 
-    // 2. Fetch attendance records tied to those services
+    // 2. Fetch all attendance records tied to any of those service IDs, joining member profiles
     let attendanceData: any[] = [];
     if (serviceIds.length > 0) {
       const { data: attData, error: attError } = await supabase
@@ -35,30 +33,22 @@ export async function getMonthlyZoneReport(year: number, month: number, serviceT
             full_name,
             raw_zone,
             zone,
-            raw_team,
-            team,
             raw_category,
             category
           )
         `)
         .in('service_id', serviceIds);
 
-      if (attError) {
-        console.error('Supabase Attendance Error:', attError.message);
-        throw attError;
-      }
+      if (attError) throw attError;
       attendanceData = attData || [];
     }
 
-    // 3. Fetch all members for baseline counts
+    // 3. Fetch all members
     const { data: membersData, error: membersError } = await supabase
       .from('members')
       .select('*');
 
-    if (membersError) {
-      console.error('Supabase Members Error:', membersError.message);
-      throw membersError;
-    }
+    if (membersError) throw membersError;
 
     return {
       services: servicesData || [],
@@ -67,7 +57,7 @@ export async function getMonthlyZoneReport(year: number, month: number, serviceT
     };
 
   } catch (err) {
-    console.error('Failed to load monthly report data:', err);
+    console.error('Error fetching monthly report:', err);
     return { services: [], attendanceRecords: [], members: [] };
   }
 }
