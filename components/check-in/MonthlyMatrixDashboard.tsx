@@ -257,7 +257,7 @@ export default function ZonesMatrixDashboard() {
             {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
           </select>
           <button onClick={handleDownload} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${theme.bgPrimary} text-white ${theme.hover}`}>
-            <Download className="w-4 h-4" /> Export PNG
+            <Download className="w-4 h-4" /> Export Report
           </button>
         </div>
       </div>

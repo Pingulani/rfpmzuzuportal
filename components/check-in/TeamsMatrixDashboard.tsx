@@ -12,48 +12,35 @@ const MONTHS = [
 ];
 const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
-// Customize these team lists to exactly match the text in your 'raw_team' column
+// Mapped exactly to your reference image categories and team names
 const TEAM_GROUPS = [
   { 
-    groupName: "OPERATIONAL TEAMS", 
-    items: ["Access Control", "Ushers", "Protocol", "Sanitation", "Hospitality", "Traffic"] 
+    groupName: "IN-SERVICE TEAMS", 
+    items: [
+      "Access Control", "Audio Streaming", "Catcher", "Information Desk", "Lyrics", 
+      "Musicians", "Photography", "Projection", "Royal Guard", "Runner", 
+      "Singer", "Sound Crew", "Stage Manager", "Traffic Patrol And Security", 
+      "Usher", "Video Streaming", "Videography"
+    ] 
   },
   { 
-    groupName: "TECHNICAL & MEDIA", 
-    items: ["Audio Streaming", "Media", "Sound", "Video Production", "Photography"] 
+    groupName: "BRANCH OPERATIONS TEAMS", 
+    items: [
+      "Archive", "Children's Church Teacher", "Church Store", "Decorator", 
+      "Graphic Design", "Pastor's Chauffer", "Pastor's Executive Secretary", 
+      "Prayer", "Public Speaker", "Sanctuary Keeper", "Script Writer", 
+      "Social Media", "Uniform", "Welfare"
+    ] 
   },
   { 
-    groupName: "MINISTRY TEAMS", 
-    items: ["Praise & Worship", "Choir", "Prayer Squad", "Follow-up", "Counseling"] 
-  },
-  { 
-    groupName: "LEADERSHIP & OTHER", 
-    items: ["Branch Directorate", "Ministers", "Pastors", "Unknown Team or Not in a Team"] 
+    groupName: "BRANCH DIRECTORATE TEAMS", 
+    items: [
+      "Children's Music And Arts Ministry (MAM)", "Finance", "GLM Committee", 
+      "Monitoring And Evaluation", "Research And Conceptualisation", 
+      "Music And Arts Ministry (MAM)", "Training"
+    ] 
   }
 ];
-
-// Helper Component for exporting typed values to PNG
-const EditableNumberField = ({ initialValue, onSave, disabled, className }: { initialValue: number, onSave: (val: number) => void, disabled?: boolean, className: string }) => {
-  const [val, setVal] = useState<number | string>(initialValue);
-  
-  useEffect(() => { setVal(initialValue); }, [initialValue]);
-
-  return (
-    <input 
-      type="number"
-      disabled={disabled}
-      value={val}
-      onChange={(e) => setVal(e.target.value === '' ? '' : parseInt(e.target.value))}
-      onBlur={(e) => {
-        const finalVal = parseInt(e.target.value) || 0;
-        setVal(finalVal);
-        if (finalVal !== initialValue) onSave(finalVal);
-      }}
-      className={className}
-      placeholder="0"
-    />
-  );
-};
 
 export default function TeamsMatrixDashboard() {
   const [activeServiceType, setActiveServiceType] = useState<'Sunday Service' | 'Midweek Service'>('Sunday Service');
@@ -63,35 +50,23 @@ export default function TeamsMatrixDashboard() {
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [visionTarget, setVisionTarget] = useState<number>(350);
-  const [savingServiceId, setSavingServiceId] = useState<string | null>(null);
 
-  // Dynamic Theme Config
+  // Dynamic Theme Config matching the Zones Matrix
   const theme = activeServiceType === 'Sunday Service' 
     ? {
         bgPrimary: 'bg-[#034a36]',
         bgSecondary: 'bg-[#023325]',
         borderPrimary: 'border-emerald-500',
-        borderSecondary: 'border-emerald-600',
         textMuted: 'text-emerald-200',
         textAccent: 'text-emerald-300',
-        textHighlight: 'text-emerald-400',
-        textData: 'text-emerald-700',
-        badge: 'bg-emerald-400',
-        ring: 'focus:border-[#034a36]',
         hover: 'hover:bg-[#023325]'
       }
     : {
         bgPrimary: 'bg-[#4a1c15]',
         bgSecondary: 'bg-[#31100a]', 
         borderPrimary: 'border-red-500',
-        borderSecondary: 'border-red-600',
         textMuted: 'text-red-200',
         textAccent: 'text-red-300',
-        textHighlight: 'text-red-400',
-        textData: 'text-red-800',
-        badge: 'bg-red-400',
-        ring: 'focus:border-[#4a1c15]',
         hover: 'hover:bg-[#31100a]'
       };
 
@@ -101,18 +76,6 @@ export default function TeamsMatrixDashboard() {
     try {
       const data = await getMonthlyZoneReport(selectedYear, selectedMonth, activeServiceType);
       setReportData(data);
-
-      const { data: targetData } = await supabase
-        .from('monthly_targets')
-        .select('target_value')
-        .eq('year', selectedYear)
-        .eq('month', selectedMonth)
-        .eq('service_type', activeServiceType)
-        .single();
-      
-      if (targetData) setVisionTarget(targetData.target_value);
-      else setVisionTarget(350);
-
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to load matrix data.');
     } finally {
@@ -123,52 +86,19 @@ export default function TeamsMatrixDashboard() {
   useEffect(() => {
     loadData();
 
+    // Listen to BOTH attendance check-ins and member profile changes (team reassignment/deletion)
     const channel = supabase
       .channel('teams-matrix-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => {
         loadData();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [activeServiceType, selectedMonth, selectedYear]);
-
-  const handleServiceFieldUpdate = async (serviceId: string, field: 'manual_headcount' | 'souls_won', value: number) => {
-    if (!serviceId) return;
-    setSavingServiceId(serviceId);
-    try {
-      const { error } = await supabase
-        .from('services')
-        .update({ [field]: value })
-        .eq('id', serviceId);
-
-      if (error) throw error;
-      await loadData(); 
-    } catch (err: any) {
-      console.error('Error updating service field:', err);
-      alert('Failed to save changes: ' + err.message);
-    } finally {
-      setSavingServiceId(null);
-    }
-  };
-
-  const handleTargetUpdate = async (val: number) => {
-    if (val === visionTarget) return;
-    setVisionTarget(val); 
-
-    try {
-      const { error } = await supabase
-        .from('monthly_targets')
-        .upsert(
-          { year: selectedYear, month: selectedMonth, service_type: activeServiceType, target_value: val },
-          { onConflict: 'year,month,service_type' }
-        );
-      if (error) throw error;
-    } catch (err: any) {
-      console.error('Error saving target:', err);
-      alert('Failed to save Vision Target: ' + err.message);
-    }
-  };
 
   const handleDownload = async () => {
     const element = document.getElementById('teams-matrix-export-container');
@@ -188,72 +118,30 @@ export default function TeamsMatrixDashboard() {
     return (
       <div className="w-full max-w-7xl bg-white p-8 rounded-2xl shadow-xl animate-pulse flex flex-col gap-6 mx-auto mt-6">
         <div className="h-16 bg-gray-100 rounded-xl"></div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-4 h-96 bg-gray-50 rounded-xl"></div>
-          <div className="lg:col-span-8 h-96 bg-gray-50 rounded-xl"></div>
-        </div>
+        <div className="h-[600px] bg-gray-50 rounded-xl"></div>
       </div>
     );
   }
 
-  const { services = [], attendanceRecords = [] } = reportData || {};
+  const { services = [], attendanceRecords = [], members = [] } = reportData || {};
 
-  // NOTE: Specifically checks raw_team for the Teams Matrix
+  // Matches against raw_team column for Teams Matrix
   const getMemberTeam = (member: any) => {
-    return (member?.raw_team || member?.team || '').trim();
+    return (member?.raw_team || '').trim();
   };
 
   const isTeamMatch = (member: any, targetTeam: string) => {
     const val = getMemberTeam(member).toLowerCase();
     const target = targetTeam.toLowerCase();
-    
-    if (target === "unknown team or not in a team") {
-      // Gather all specified known teams from the config to check against
-      const allKnown = TEAM_GROUPS.flatMap(g => g.items).map(t => t.toLowerCase());
-      return !val || !allKnown.includes(val);
-    }
-    
     return val === target;
   };
 
   const displayWeeks = [1, 2, 3, 4, 5];
-
-  const weeklyCardStats = displayWeeks.map(wkNum => {
-    const matchedServices = services.filter((s: any) => Number(s.week_number) === wkNum);
-    const hasService = matchedServices.length > 0;
-    const serviceIds = matchedServices.map((s: any) => s.id);
-    
-    const primaryService = hasService ? matchedServices[0] : null;
-    const firstServiceId = primaryService ? primaryService.id : null;
-    
-    const matchedRecords = attendanceRecords.filter((r: any) => serviceIds.includes(r.service_id));
-    const registeredCount = new Set(matchedRecords.map((r: any) => r.member_id)).size;
-    
-    const headcount = primaryService ? (Number(primaryService.manual_headcount) || 0) : 0;
-    const soulsWon = primaryService ? (Number(primaryService.souls_won) || 0) : 0;
-    
-    const variance = headcount - registeredCount;
-
-    return {
-      weekNum: wkNum,
-      serviceIds,
-      firstServiceId,
-      dateStr: hasService ? primaryService.service_date : 'No Service Scheduled',
-      headcount,
-      registered: registeredCount,
-      soulsWon,
-      variance
-    };
-  });
-
-  const totalMonthlyHeadcount = weeklyCardStats.reduce((acc, curr) => acc + curr.headcount, 0);
   const activeWeeksCount = services.length > 0 ? new Set(services.map((s: any) => s.week_number)).size : 1;
-  const averageAttendance = Math.round(totalMonthlyHeadcount / (activeWeeksCount || 1));
-  const milestonePercentage = visionTarget > 0 ? ((averageAttendance / visionTarget) * 100).toFixed(1) : '0.0';
 
   return (
     <div className="w-full max-w-[1500px] flex flex-col gap-4 mx-auto text-gray-900 p-2 md:p-4">
-      {/* Top Navigation Controls */}
+      {/* Controls Bar */}
       <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
         <div className="flex gap-2">
           <button 
@@ -289,7 +177,7 @@ export default function TeamsMatrixDashboard() {
         </div>
       )}
 
-      {/* Main Matrix Export Container */}
+      {/* Full-Width Matrix Export Container */}
       <div id="teams-matrix-export-container" className="bg-[#fefce8] p-4 md:p-6 rounded-2xl border border-yellow-200 shadow-xl font-sans">
         
         {/* Header Banner */}
@@ -298,7 +186,7 @@ export default function TeamsMatrixDashboard() {
             <span className={`text-xs font-black ${theme.textAccent} uppercase tracking-widest block mb-1`}>Branch Attendance Report</span>
             <h1 className="text-3xl font-black tracking-wider uppercase mb-0.5">MZUZU BRANCH</h1>
             <h2 className="text-[#facc15] text-sm font-black tracking-widest uppercase">
-              {MONTHS[selectedMonth - 1]} {selectedYear} — {activeServiceType.toUpperCase()} TEAMS
+              {MONTHS[selectedMonth - 1]} {selectedYear} — {activeServiceType.toUpperCase()} TEAMS REPORT
             </h2>
           </div>
           <div className="text-right">
@@ -307,149 +195,85 @@ export default function TeamsMatrixDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          
-          {/* Left Column: Weekly Cards */}
-          <div className="lg:col-span-4 flex flex-col gap-3">
-            {weeklyCardStats.map((wk) => {
-              const hasService = wk.firstServiceId !== null;
-              return (
-                <div key={wk.weekNum} className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
-                  <div className={`${theme.bgPrimary} text-white px-4 py-2 flex justify-between items-center text-sm font-black transition-colors`}>
-                    <span className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${theme.badge}`}></span> WEEK {wk.weekNum}
-                    </span>
-                    <span className={`${theme.textMuted} font-mono text-xs`}>{wk.dateStr}</span>
-                  </div>
-                  <div className="p-3 grid grid-cols-2 gap-3 text-sm">
-                    
-                    {/* PROMINENT Headcount Input */}
-                    <div className="bg-white p-2 rounded-lg border-2 border-gray-400 shadow-sm flex flex-col justify-center">
-                      <span className="text-xs font-black text-gray-800 uppercase block mb-1">Headcount</span>
-                      <EditableNumberField 
-                        initialValue={wk.headcount} 
-                        onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'manual_headcount', val); }}
-                        disabled={!hasService || savingServiceId === wk.firstServiceId}
-                        className={`w-full bg-transparent text-2xl font-black text-gray-900 outline-none ${theme.ring} disabled:opacity-50`}
-                      />
-                    </div>
-
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
-                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Registered</span>
-                      <span className={`text-xl font-black ${theme.textData}`}>{wk.registered}</span>
-                    </div>
-
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
-                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Souls Won</span>
-                      <EditableNumberField 
-                        initialValue={wk.soulsWon} 
-                        onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', val); }}
-                        disabled={!hasService || savingServiceId === wk.firstServiceId}
-                        className={`w-full bg-transparent text-xl font-black text-red-600 outline-none ${theme.ring} disabled:opacity-50`}
-                      />
-                    </div>
-
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
-                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Var</span>
-                      <span className={`text-xl font-black ${wk.variance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {wk.variance > 0 ? `+${wk.variance}` : wk.variance}
-                      </span>
-                    </div>
-
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Monthly Average Card */}
-            <div className={`${theme.bgPrimary} text-white p-5 rounded-xl shadow-md border-b-4 ${theme.borderPrimary} transition-colors`}>
-              <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Monthly Performance</span>
-              <div className="flex justify-between items-end mt-1">
-                <span className="text-sm font-bold uppercase tracking-wider">Average Headcount</span>
-                <span className="text-3xl font-black text-[#facc15] font-mono">{averageAttendance}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Teams Matrix Table */}
-          <div className="lg:col-span-8 flex flex-col gap-4">
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-md">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className={`${theme.bgPrimary} text-white text-sm transition-colors`}>
-                    <th className="py-2.5 px-4 font-black tracking-wider uppercase">TEAMS / DEPARTMENT</th>
-                    {displayWeeks.map(wk => (
-                      <th key={wk} className={`py-2.5 px-2 font-black tracking-wider text-center ${theme.textMuted} w-14`}>WK{wk}</th>
-                    ))}
-                    <th className={`py-2.5 px-3 font-black tracking-wider text-center text-[#facc15] ${theme.bgSecondary} w-20`}>AVG</th>
+        {/* Matrix Table */}
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-md">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className={`${theme.bgPrimary} text-white text-sm transition-colors`}>
+                <th className="py-3 px-5 font-black tracking-wider uppercase w-1/4">NAME</th>
+                <th className={`py-3 px-3 font-black tracking-wider text-center ${theme.textMuted} w-16`}>MEM.</th>
+                {displayWeeks.map(wk => (
+                  <th key={wk} className={`py-3 px-3 font-black tracking-wider text-center ${theme.textMuted} w-16`}>WK{wk}</th>
+                ))}
+                <th className={`py-3 px-4 font-black tracking-wider text-center text-[#facc15] ${theme.bgSecondary} w-20`}>AVE.</th>
+                <th className={`py-3 px-4 font-black tracking-wider text-center text-gray-900 bg-[#fef08a] w-24`}>AVE.%</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {TEAM_GROUPS.map((group, gIdx) => (
+                <Fragment key={gIdx}>
+                  {/* Yellow Category Headers */}
+                  <tr className="bg-[#fef08a] border-y border-yellow-300 text-gray-900 font-black uppercase tracking-wider text-xs">
+                    <td colSpan={9} className="py-2.5 px-5 flex items-center gap-2">
+                      <span className="bg-gray-900 text-yellow-300 w-4 h-4 rounded-sm flex items-center justify-center text-[10px]">∇</span> 
+                      {group.groupName}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 text-sm">
-                  {TEAM_GROUPS.map((group, gIdx) => (
-                    <Fragment key={gIdx}>
-                      <tr className="bg-[#fef08a] border-y border-yellow-300 text-gray-900 font-black uppercase tracking-wider text-xs">
-                        <td colSpan={7} className="py-2 px-4">∇ {group.groupName}</td>
-                      </tr>
-                      {group.items.map((itemName, iIdx) => {
+                  
+                  {/* Team Rows */}
+                  {group.items.map((itemName, iIdx) => {
+                    
+                    // 1. Calculate base member count from members table (Updates on the fly)
+                    const memCount = members.filter((m: any) => isTeamMatch(m, itemName)).length;
+
+                    // 2. Calculate weekly check-ins
+                    const weeklyCounts = displayWeeks.map(wkNum => {
+                      const matchedServices = services.filter((s: any) => Number(s.week_number) === wkNum);
+                      if (matchedServices.length === 0) return 0;
+                      
+                      const serviceIds = matchedServices.map((s: any) => s.id);
+                      return attendanceRecords.filter((r: any) => {
+                        if (!serviceIds.includes(r.service_id)) return false;
+                        const memberObj = r.members;
+                        return memberObj && isTeamMatch(memberObj, itemName);
+                      }).length;
+                    });
+
+                    // 3. Averages & Percentages
+                    const totalAttended = weeklyCounts.reduce((sum, val) => sum + val, 0);
+                    const avg = totalAttended > 0 ? Math.round(totalAttended / activeWeeksCount) : 0;
+                    const avgPercent = memCount > 0 ? Math.round((avg / memCount) * 100) : 0;
+
+                    return (
+                      <tr key={iIdx} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                        <td className="py-2.5 px-5 font-bold text-gray-900">{itemName}</td>
                         
-                        // Map attendance checks specifically for teams
-                        const weeklyCounts = displayWeeks.map(wkNum => {
-                          const matchedServices = services.filter((s: any) => Number(s.week_number) === wkNum);
-                          if (matchedServices.length === 0) return 0;
-                          
-                          const serviceIds = matchedServices.map((s: any) => s.id);
-                          return attendanceRecords.filter((r: any) => {
-                            if (!serviceIds.includes(r.service_id)) return false;
-                            const memberObj = r.members;
-                            return memberObj && isTeamMatch(memberObj, itemName);
-                          }).length;
-                        });
+                        {/* Member Count */}
+                        <td className="py-2.5 px-3 text-center font-black text-gray-600 bg-gray-50/50 text-base">
+                          {memCount}
+                        </td>
 
-                        const totalAttended = weeklyCounts.reduce((sum, val) => sum + val, 0);
-                        const avg = totalAttended > 0 ? Math.round(totalAttended / activeWeeksCount) : 0;
+                        {/* Weekly Columns */}
+                        {weeklyCounts.map((count, wIdx) => (
+                          <td key={wIdx} className="py-2.5 px-3 text-center font-mono font-black text-base">
+                            {count > 0 ? <span className="text-gray-900">{count}</span> : <span className="text-gray-300">0</span>}
+                          </td>
+                        ))}
 
-                        return (
-                          <tr key={iIdx} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                            <td className="py-2 px-4 font-bold text-gray-900">{itemName}</td>
-                            {weeklyCounts.map((count, wIdx) => (
-                              <td key={wIdx} className="py-2 px-2 text-center font-mono font-black text-base">
-                                {count > 0 ? <span className="text-gray-900">{count}</span> : <span className="text-gray-300">0</span>}
-                              </td>
-                            ))}
-                            <td className="py-2 px-3 text-center font-black bg-[#fefce8] text-gray-900 text-base">{avg}</td>
-                          </tr>
-                        );
-                      })}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            {/* Strategic Goal Card */}
-            <div className={`${theme.bgPrimary} text-white p-5 rounded-xl flex flex-col sm:flex-row justify-between items-center shadow-md border-b-4 ${theme.borderPrimary} gap-4 transition-colors`}>
-              <div>
-                <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Strategic Goal</span>
-                <span className="text-xl font-black tracking-wider">VISION 100% TARGET</span>
-              </div>
-              <div className="flex items-center gap-6">
-                
-                <div className="text-right flex flex-col items-end">
-                  <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block mb-1`}>Target</span>
-                  <EditableNumberField 
-                    initialValue={visionTarget} 
-                    onSave={handleTargetUpdate} 
-                    className={`w-28 bg-black/20 border-2 border-black/30 rounded-lg px-3 py-1 text-2xl font-black text-[#facc15] font-mono text-right outline-none focus:bg-black/40 transition-all ${theme.ring}`}
-                  />
-                </div>
-
-                <div className={`${theme.bgSecondary} px-5 py-3 rounded-xl border ${theme.borderSecondary} text-right`}>
-                  <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Milestone Status</span>
-                  <span className={`text-2xl font-black ${theme.textHighlight} font-mono`}>{milestonePercentage}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
+                        {/* Averages */}
+                        <td className="py-2.5 px-4 text-center font-black bg-[#fefce8] text-gray-900 text-base">
+                          {avg}
+                        </td>
+                        <td className="py-2.5 px-4 text-center font-black bg-[#fef08a] text-gray-900 text-base">
+                          {avgPercent}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
