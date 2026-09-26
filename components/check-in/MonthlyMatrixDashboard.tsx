@@ -25,7 +25,6 @@ export default function ZonesMatrixDashboard() {
   
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [savingServiceId, setSavingServiceId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const loadData = async () => {
@@ -54,9 +53,9 @@ export default function ZonesMatrixDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [activeServiceType, selectedMonth, selectedYear]);
 
+  // Saves to Supabase only when user finishes typing and clicks away
   const handleServiceFieldUpdate = async (serviceId: string, field: 'manual_headcount' | 'souls_won', value: number) => {
     if (!serviceId) return;
-    setSavingServiceId(serviceId);
 
     try {
       const { error } = await supabase
@@ -65,12 +64,10 @@ export default function ZonesMatrixDashboard() {
         .eq('id', serviceId);
 
       if (error) throw error;
-      await loadData();
+      await loadData(); // Force a fresh pull from Supabase immediately after saving
     } catch (err: any) {
       console.error('Error updating service field:', err);
       alert('Failed to save changes: ' + err.message);
-    } finally {
-      setSavingServiceId(null);
     }
   };
 
@@ -102,7 +99,6 @@ export default function ZonesMatrixDashboard() {
 
   const { services = [], attendanceRecords = [] } = reportData || {};
 
-  // NOTE: This now strictly targets raw_category as per your database structure
   const getMemberCategory = (member: any) => {
     return (member?.raw_category || '').trim();
   };
@@ -216,14 +212,19 @@ export default function ZonesMatrixDashboard() {
                   </div>
                   <div className="p-3 grid grid-cols-2 gap-2 text-xs">
                     
+                    {/* Fixed Headcount Input: Uses onBlur to save when done typing */}
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
                       <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Headcount (Edit)</span>
                       <input 
                         type="number"
-                        disabled={!hasService || savingServiceId === wk.firstServiceId}
-                        value={wk.headcount}
-                        onChange={(e) => {
-                          if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'manual_headcount', parseInt(e.target.value) || 0);
+                        disabled={!hasService}
+                        defaultValue={wk.headcount}
+                        key={`headcount-${wk.firstServiceId}-${wk.headcount}`} // Forces update strictly from Supabase
+                        onBlur={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          if (wk.firstServiceId && val !== wk.headcount) {
+                            handleServiceFieldUpdate(wk.firstServiceId, 'manual_headcount', val);
+                          }
                         }}
                         className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-gray-900 outline-none focus:border-[#034a36] disabled:opacity-50"
                         placeholder="0"
@@ -235,14 +236,19 @@ export default function ZonesMatrixDashboard() {
                       <span className="text-base font-black text-emerald-700">{wk.registered}</span>
                     </div>
 
+                    {/* Fixed Souls Won Input: Uses onBlur to save when done typing */}
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
                       <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Souls Won (Edit)</span>
                       <input 
                         type="number"
-                        disabled={!hasService || savingServiceId === wk.firstServiceId}
-                        value={wk.soulsWon}
-                        onChange={(e) => {
-                          if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', parseInt(e.target.value) || 0);
+                        disabled={!hasService}
+                        defaultValue={wk.soulsWon}
+                        key={`soulswon-${wk.firstServiceId}-${wk.soulsWon}`} // Forces update strictly from Supabase
+                        onBlur={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          if (wk.firstServiceId && val !== wk.soulsWon) {
+                            handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', val);
+                          }
                         }}
                         className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-red-600 outline-none focus:border-[#034a36] disabled:opacity-50"
                         placeholder="0"
