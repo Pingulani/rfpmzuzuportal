@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import { supabase } from '../../utils/supabase';
 import { getMonthlyZoneReport } from '../../services/monthlyReportService';
-import { Calendar, Users, Download, AlertCircle, Save, Loader2 } from 'lucide-react';
+import { Calendar, Users, Download, AlertCircle } from 'lucide-react';
 import html2canvas from 'html2canvas-pro';
 
 const MONTHS = [
@@ -13,23 +13,14 @@ const MONTHS = [
 const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
 const ZONE_GROUPS = [
-  {
-    groupName: "ZONES",
-    items: ["Zone 1", "Zone 2", "Zone 3", "Zone 4"]
-  },
-  {
-    groupName: "CAMPUSES",
-    items: ["MCA", "Mzuzu Technical", "MIT", "MZUNI", "UNILIA", "MIJ"]
-  },
-  {
-    groupName: "OTHER",
-    items: ["Other Branches", "Special Services", "New Members", "Unknown Zone or Not in a Zone"]
-  }
+  { groupName: "ZONES", items: ["Zone 1", "Zone 2", "Zone 3", "Zone 4"] },
+  { groupName: "CAMPUSES", items: ["MCA", "Mzuzu Technical", "MIT", "MZUNI", "UNILIA", "MIJ"] },
+  { groupName: "OTHER", items: ["Other Branches", "Special Services", "New Members", "Unknown Zone or Not in a Zone"] }
 ];
 
 export default function ZonesMatrixDashboard() {
   const [activeServiceType, setActiveServiceType] = useState<'Sunday Service' | 'Midweek Service'>('Sunday Service');
-  const [selectedMonth, setSelectedMonth] = useState(9); // Default September 2026
+  const [selectedMonth, setSelectedMonth] = useState(9);
   const [selectedYear, setSelectedYear] = useState(2026);
   
   const [reportData, setReportData] = useState<any>(null);
@@ -53,7 +44,6 @@ export default function ZonesMatrixDashboard() {
   useEffect(() => {
     loadData();
 
-    // Real-time subscription to catch check-ins instantly
     const channel = supabase
       .channel('zones-matrix-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
@@ -64,7 +54,6 @@ export default function ZonesMatrixDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [activeServiceType, selectedMonth, selectedYear]);
 
-  // Handler to update editable Headcount or Souls Won in Supabase
   const handleServiceFieldUpdate = async (serviceId: string, field: 'manual_headcount' | 'souls_won', value: number) => {
     if (!serviceId) return;
     setSavingServiceId(serviceId);
@@ -76,8 +65,6 @@ export default function ZonesMatrixDashboard() {
         .eq('id', serviceId);
 
       if (error) throw error;
-      
-      // Refresh local data state
       await loadData();
     } catch (err: any) {
       console.error('Error updating service field:', err);
@@ -91,20 +78,13 @@ export default function ZonesMatrixDashboard() {
     const element = document.getElementById('zones-matrix-export-container');
     if (!element) return;
     try {
-      const canvas = await html2canvas(element, { 
-        scale: 2, 
-        backgroundColor: '#fefce8',
-        logging: false,
-        useCORS: true
-      });
-      const dataImage = canvas.toDataURL('image/png');
+      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#fefce8', useCORS: true });
       const link = document.createElement('a');
       link.download = `Mzuzu_Branch_Zones_Matrix_${MONTHS[selectedMonth - 1]}_${selectedYear}.png`;
-      link.href = dataImage;
+      link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (err) {
-      console.error('Failed to export image:', err);
-      alert('Export failed.');
+      console.error('Failed to export:', err);
     }
   };
 
@@ -122,49 +102,41 @@ export default function ZonesMatrixDashboard() {
 
   const { services = [], attendanceRecords = [] } = reportData || {};
 
-  // Helper to normalize and match zone/campus/category
-  const getMemberZoneOrCategory = (member: any) => {
-    return (member?.raw_zone || member?.zone || member?.raw_category || member?.category || '').trim();
+  // NOTE: This now strictly targets raw_category as per your database structure
+  const getMemberCategory = (member: any) => {
+    return (member?.raw_category || '').trim();
   };
 
   const isItemMatch = (member: any, targetItem: string) => {
-    const val = getMemberZoneOrCategory(member).toLowerCase();
+    const val = getMemberCategory(member).toLowerCase();
     const target = targetItem.toLowerCase();
-
     if (target === "unknown zone or not in a zone") {
-      const allKnown = [
-        "zone 1", "zone 2", "zone 3", "zone 4", 
-        "mca", "mzuzu technical", "mit", "mzuni", "unilia", "mij", 
-        "other branches", "special services", "new members"
-      ];
+      const allKnown = ["zone 1", "zone 2", "zone 3", "zone 4", "mca", "mzuzu technical", "mit", "mzuni", "unilia", "mij", "other branches", "special services", "new members"];
       return !val || !allKnown.includes(val);
     }
-
     return val === target;
   };
 
   const displayWeeks = [1, 2, 3, 4, 5];
 
-  // Build weekly stats for the left sidebar cards
   const weeklyCardStats = displayWeeks.map(wkNum => {
-    const matchedService = services.find((s: any) => Number(s.week_number) === wkNum);
-    const serviceId = matchedService?.id;
+    const matchedServices = services.filter((s: any) => Number(s.week_number) === wkNum);
+    const hasService = matchedServices.length > 0;
+    const serviceIds = matchedServices.map((s: any) => s.id);
+    const firstServiceId = hasService ? matchedServices[0].id : null;
     
-    // Filter attendance records specifically for this service ID
-    const matchedRecords = serviceId ? attendanceRecords.filter((r: any) => r.service_id === serviceId) : [];
-    
-    // Unique attendees check-in count for this week (Registered)
+    const matchedRecords = attendanceRecords.filter((r: any) => serviceIds.includes(r.service_id));
     const registeredCount = new Set(matchedRecords.map((r: any) => r.member_id)).size;
-    const headcount = matchedService ? (Number(matchedService.manual_headcount) || 0) : 0;
-    const soulsWon = matchedService ? (Number(matchedService.souls_won) || 0) : 0;
     
-    // Variance = Registered (Checked-in) minus Headcount
+    const headcount = matchedServices.reduce((acc: number, s: any) => acc + (Number(s.manual_headcount) || 0), 0);
+    const soulsWon = matchedServices.reduce((acc: number, s: any) => acc + (Number(s.souls_won) || 0), 0);
     const variance = registeredCount - headcount;
 
     return {
       weekNum: wkNum,
-      serviceId,
-      dateStr: matchedService?.service_date || 'No Service Scheduled',
+      serviceIds,
+      firstServiceId,
+      dateStr: hasService ? matchedServices[0].service_date : 'No Service Scheduled',
       headcount,
       registered: registeredCount,
       soulsWon,
@@ -178,8 +150,6 @@ export default function ZonesMatrixDashboard() {
 
   return (
     <div className="w-full max-w-[1450px] flex flex-col gap-4 mx-auto text-gray-900 p-2 md:p-4">
-      
-      {/* Controls Bar */}
       <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
         <div className="flex gap-2">
           <button 
@@ -202,10 +172,7 @@ export default function ZonesMatrixDashboard() {
           <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 rounded-lg outline-none">
             {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
           </select>
-          <button 
-            onClick={handleDownload} 
-            className="px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 bg-[#034a36] text-white hover:bg-[#023325]"
-          >
+          <button onClick={handleDownload} className="px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 bg-[#034a36] text-white hover:bg-[#023325]">
             <Download className="w-4 h-4" /> Export PNG
           </button>
         </div>
@@ -218,10 +185,8 @@ export default function ZonesMatrixDashboard() {
         </div>
       )}
 
-      {/* Main Export Container */}
       <div id="zones-matrix-export-container" className="bg-[#fefce8] p-4 md:p-6 rounded-2xl border border-yellow-200 shadow-xl font-sans">
         
-        {/* Header Banner */}
         <div className="bg-[#034a36] text-white px-6 py-4 rounded-t-xl flex justify-between items-end border-b-4 border-emerald-500 mb-4">
           <div>
             <span className="text-[10px] font-black text-emerald-300 uppercase tracking-widest block mb-1">Branch Attendance Report</span>
@@ -236,13 +201,11 @@ export default function ZonesMatrixDashboard() {
           </div>
         </div>
 
-        {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           
-          {/* Left Column: Weekly Cards with Editable Headcount & Souls Won */}
           <div className="lg:col-span-4 flex flex-col gap-3">
             {weeklyCardStats.map((wk) => {
-              const hasService = wk.serviceId !== undefined;
+              const hasService = wk.firstServiceId !== null;
               return (
                 <div key={wk.weekNum} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                   <div className="bg-[#034a36] text-white px-3 py-1.5 flex justify-between items-center text-xs font-black">
@@ -253,47 +216,41 @@ export default function ZonesMatrixDashboard() {
                   </div>
                   <div className="p-3 grid grid-cols-2 gap-2 text-xs">
                     
-                    {/* Editable Headcount */}
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
                       <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Headcount (Edit)</span>
                       <input 
                         type="number"
-                        disabled={!hasService || savingServiceId === wk.serviceId}
+                        disabled={!hasService || savingServiceId === wk.firstServiceId}
                         value={wk.headcount}
                         onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          if (wk.serviceId) handleServiceFieldUpdate(wk.serviceId, 'manual_headcount', val);
+                          if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'manual_headcount', parseInt(e.target.value) || 0);
                         }}
-                        className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-gray-900 outline-none focus:border-[#034a36]"
+                        className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-gray-900 outline-none focus:border-[#034a36] disabled:opacity-50"
                         placeholder="0"
                       />
                     </div>
 
-                    {/* Live Registered (Check-ins) */}
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col justify-between">
                       <span className="text-[10px] font-bold text-gray-400 uppercase block">Registered</span>
                       <span className="text-base font-black text-emerald-700">{wk.registered}</span>
                     </div>
 
-                    {/* Editable Souls Won */}
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
                       <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Souls Won (Edit)</span>
                       <input 
                         type="number"
-                        disabled={!hasService || savingServiceId === wk.serviceId}
+                        disabled={!hasService || savingServiceId === wk.firstServiceId}
                         value={wk.soulsWon}
                         onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          if (wk.serviceId) handleServiceFieldUpdate(wk.serviceId, 'souls_won', val);
+                          if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', parseInt(e.target.value) || 0);
                         }}
-                        className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-red-600 outline-none focus:border-[#034a36]"
+                        className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-red-600 outline-none focus:border-[#034a36] disabled:opacity-50"
                         placeholder="0"
                       />
                     </div>
 
-                    {/* Variance: Registered minus Headcount */}
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col justify-between">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase block" title="Registered minus Headcount">Variance (Reg-Head)</span>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase block">Variance (Reg-Head)</span>
                       <span className={`text-base font-black ${wk.variance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                         {wk.variance >= 0 ? `+${wk.variance}` : wk.variance}
                       </span>
@@ -304,7 +261,6 @@ export default function ZonesMatrixDashboard() {
               );
             })}
 
-            {/* Monthly Average Attendance Box */}
             <div className="bg-[#034a36] text-white p-4 rounded-xl shadow-md border-b-4 border-emerald-500">
               <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest block">Monthly Performance</span>
               <div className="flex justify-between items-end mt-1">
@@ -314,7 +270,6 @@ export default function ZonesMatrixDashboard() {
             </div>
           </div>
 
-          {/* Right Column: Zones, Campuses & Other Matrix Table */}
           <div className="lg:col-span-8 flex flex-col gap-4">
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
               <table className="w-full text-left border-collapse">
@@ -330,26 +285,20 @@ export default function ZonesMatrixDashboard() {
                 <tbody className="divide-y divide-gray-100 text-xs">
                   {ZONE_GROUPS.map((group, gIdx) => (
                     <Fragment key={gIdx}>
-                      {/* Category Group Banner */}
                       <tr className="bg-[#fef08a] border-y border-yellow-300 text-gray-900 font-black uppercase tracking-wider text-[10px]">
-                        <td colSpan={7} className="py-1.5 px-4">
-                          ∇ {group.groupName}
-                        </td>
+                        <td colSpan={7} className="py-1.5 px-4">∇ {group.groupName}</td>
                       </tr>
-
-                      {/* Items under Group */}
                       {group.items.map((itemName, iIdx) => {
+                        
                         const weeklyCounts = displayWeeks.map(wkNum => {
-                          const matchedService = services.find((s: any) => Number(s.week_number) === wkNum);
-                          if (!matchedService) return 0;
+                          const matchedServices = services.filter((s: any) => Number(s.week_number) === wkNum);
+                          if (matchedServices.length === 0) return 0;
                           
-                          const serviceId = matchedService.id;
-
+                          const serviceIds = matchedServices.map((s: any) => s.id);
                           return attendanceRecords.filter((r: any) => {
-                            if (r.service_id !== serviceId) return false;
+                            if (!serviceIds.includes(r.service_id)) return false;
                             const memberObj = r.members;
-                            if (!memberObj) return false;
-                            return isItemMatch(memberObj, itemName);
+                            return memberObj && isItemMatch(memberObj, itemName);
                           }).length;
                         });
 
@@ -359,17 +308,11 @@ export default function ZonesMatrixDashboard() {
                         return (
                           <tr key={iIdx} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
                             <td className="py-2.5 px-4 font-bold text-gray-900">{itemName}</td>
-                            
                             {weeklyCounts.map((count, wIdx) => (
                               <td key={wIdx} className="py-2.5 px-2 text-center font-mono font-bold">
-                                {count > 0 ? (
-                                  <span className="text-gray-900">{count}</span>
-                                ) : (
-                                  <span className="text-gray-300">0</span>
-                                )}
+                                {count > 0 ? <span className="text-gray-900">{count}</span> : <span className="text-gray-300">0</span>}
                               </td>
                             ))}
-
                             <td className="py-2.5 px-3 text-center font-black bg-[#fefce8] text-gray-900">{avg}</td>
                           </tr>
                         );
@@ -379,8 +322,7 @@ export default function ZonesMatrixDashboard() {
                 </tbody>
               </table>
             </div>
-
-            {/* Strategic Goal Card */}
+            
             <div className="bg-[#034a36] text-white p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center shadow-md border-b-4 border-emerald-500 gap-4">
               <div>
                 <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest block">Strategic Goal</span>
@@ -397,11 +339,8 @@ export default function ZonesMatrixDashboard() {
                 </div>
               </div>
             </div>
-
           </div>
-
         </div>
-
       </div>
     </div>
   );
