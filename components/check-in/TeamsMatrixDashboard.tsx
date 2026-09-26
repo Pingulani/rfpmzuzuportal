@@ -12,7 +12,6 @@ const MONTHS = [
 ];
 const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
-// Mapped exactly to your reference image categories and team names
 const TEAM_GROUPS = [
   { 
     groupName: "IN-SERVICE TEAMS", 
@@ -51,23 +50,14 @@ export default function TeamsMatrixDashboard() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Dynamic Theme Config
   const theme = activeServiceType === 'Sunday Service' 
     ? {
-        bgPrimary: 'bg-[#034a36]',
-        bgSecondary: 'bg-[#023325]',
-        borderPrimary: 'border-emerald-500',
-        textMuted: 'text-emerald-200',
-        textAccent: 'text-emerald-300',
-        hover: 'hover:bg-[#023325]'
+        bgPrimary: 'bg-[#034a36]', bgSecondary: 'bg-[#023325]', borderPrimary: 'border-emerald-500',
+        textMuted: 'text-emerald-200', textAccent: 'text-emerald-300', hover: 'hover:bg-[#023325]'
       }
     : {
-        bgPrimary: 'bg-[#4a1c15]',
-        bgSecondary: 'bg-[#31100a]', 
-        borderPrimary: 'border-red-500',
-        textMuted: 'text-red-200',
-        textAccent: 'text-red-300',
-        hover: 'hover:bg-[#31100a]'
+        bgPrimary: 'bg-[#4a1c15]', bgSecondary: 'bg-[#31100a]', borderPrimary: 'border-red-500',
+        textMuted: 'text-red-200', textAccent: 'text-red-300', hover: 'hover:bg-[#31100a]'
       };
 
   const loadData = async () => {
@@ -76,17 +66,6 @@ export default function TeamsMatrixDashboard() {
     try {
       const data = await getMonthlyZoneReport(selectedYear, selectedMonth, activeServiceType);
       setReportData(data);
-
-      // Console Logger to identify unmapped DB teams
-      if (data.members) {
-        const dbTeams = [...new Set(data.members.map((m:any) => m.raw_team).filter(Boolean))];
-        const allMatrixTeams = TEAM_GROUPS.flatMap(g => g.items).map(t => t.toLowerCase());
-        const unmapped = dbTeams.filter((dbt: any) => !allMatrixTeams.includes(dbt.toLowerCase()));
-        if (unmapped.length > 0) {
-          console.warn("These teams in your DB don't match the Matrix layout:", unmapped);
-        }
-      }
-
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to load matrix data.');
     } finally {
@@ -97,15 +76,10 @@ export default function TeamsMatrixDashboard() {
   useEffect(() => {
     loadData();
 
-    // Listen to BOTH attendance check-ins and member profile changes (team updates)
     const channel = supabase
       .channel('teams-matrix-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
-        loadData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => {
-        loadData();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => { loadData(); })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -136,9 +110,9 @@ export default function TeamsMatrixDashboard() {
 
   const { services = [], attendanceRecords = [], members = [] } = reportData || {};
 
-  // Smart Match Algorithm: Handles commas, trailing 's', etc.
+  // Smart Match Algorithm with extra Safety Nets (String casting)
   const isTeamMatch = (member: any, targetTeam: string) => {
-    const rawDbTeam = (member?.raw_team || '').toLowerCase();
+    const rawDbTeam = String(member?.raw_team || '').toLowerCase();
     const target = targetTeam.toLowerCase().trim();
     
     const normalize = (str: string) => str.replace(/&/g, 'and').replace(/['’]/g, '').trim();
@@ -168,18 +142,8 @@ export default function TeamsMatrixDashboard() {
       {/* Controls Bar */}
       <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
         <div className="flex gap-2">
-          <button 
-            onClick={() => setActiveServiceType('Sunday Service')} 
-            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#034a36] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            <Calendar className="w-4 h-4" /> Sunday Services
-          </button>
-          <button 
-            onClick={() => setActiveServiceType('Midweek Service')} 
-            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#4a1c15] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            <Users className="w-4 h-4" /> Midweek Services
-          </button>
+          <button onClick={() => setActiveServiceType('Sunday Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#034a36] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Calendar className="w-4 h-4" /> Sunday Services</button>
+          <button onClick={() => setActiveServiceType('Midweek Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#4a1c15] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Users className="w-4 h-4" /> Midweek Services</button>
         </div>
         <div className="flex items-center gap-2">
           <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 rounded-lg outline-none">
@@ -188,16 +152,13 @@ export default function TeamsMatrixDashboard() {
           <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 rounded-lg outline-none">
             {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
           </select>
-          <button onClick={handleDownload} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${theme.bgPrimary} text-white ${theme.hover}`}>
-            <Download className="w-4 h-4" /> Export PNG
-          </button>
+          <button onClick={handleDownload} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${theme.bgPrimary} text-white ${theme.hover}`}><Download className="w-4 h-4" /> Export PNG</button>
         </div>
       </div>
 
       {errorMsg && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <p>{errorMsg}</p>
+          <AlertCircle className="w-5 h-5 shrink-0" /><p>{errorMsg}</p>
         </div>
       )}
 
@@ -236,7 +197,6 @@ export default function TeamsMatrixDashboard() {
             <tbody className="divide-y divide-gray-100 text-sm">
               {TEAM_GROUPS.map((group, gIdx) => (
                 <Fragment key={gIdx}>
-                  {/* Yellow Category Headers */}
                   <tr className="bg-[#fef08a] border-y border-yellow-300 text-gray-900 font-black uppercase tracking-wider text-xs">
                     <td colSpan={9} className="py-2.5 px-5 flex items-center gap-2">
                       <span className="bg-gray-900 text-yellow-300 w-4 h-4 rounded-sm flex items-center justify-center text-[10px]">∇</span> 
@@ -244,11 +204,14 @@ export default function TeamsMatrixDashboard() {
                     </td>
                   </tr>
                   
-                  {/* Team Rows */}
                   {group.items.map((itemName, iIdx) => {
                     
-                    // 1. Calculate base member count (Updates instantly if member changes team)
-                    const memCount = members.filter((m: any) => isTeamMatch(m, itemName)).length;
+                    // 1. Calculate base member count (Ignores deleted/transferred members)
+                    const memCount = members.filter((m: any) => {
+                      const status = String(m?.member_status || '').toLowerCase();
+                      if (status === 'deleted' || status === 'transferred') return false;
+                      return isTeamMatch(m, itemName);
+                    }).length;
 
                     // 2. Calculate weekly attendance for this specific team
                     const weeklyCounts = displayWeeks.map(wkNum => {

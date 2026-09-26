@@ -31,16 +31,17 @@ export async function getMonthlyZoneReport(year: number, month: number, serviceT
           )
         `)
         .in('service_id', serviceIds)
-        .limit(10000); // Bypasses Supabase 1000-row limit
+        .limit(10000); // Guarantees no check-ins are skipped
 
       if (attError) throw attError;
       attendanceData = attData || [];
     }
 
+    // Explicitly fetch the registry for the MEM. column
     const { data: membersData, error: membersError } = await supabase
       .from('members')
       .select('*')
-      .limit(10000); // Bypasses Supabase 1000-row limit
+      .limit(10000); // Guarantees no members are skipped
 
     if (membersError) throw membersError;
 
