@@ -12,6 +12,7 @@ const MONTHS = [
 ];
 const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
+// Mapped exactly to your reference image categories and team names
 const TEAM_GROUPS = [
   { 
     groupName: "IN-SERVICE TEAMS", 
@@ -41,26 +42,6 @@ const TEAM_GROUPS = [
   }
 ];
 
-const EditableNumberField = ({ initialValue, onSave, disabled, className }: { initialValue: number, onSave: (val: number) => void, disabled?: boolean, className: string }) => {
-  const [val, setVal] = useState<number | string>(initialValue);
-  useEffect(() => { setVal(initialValue); }, [initialValue]);
-  return (
-    <input 
-      type="number"
-      disabled={disabled}
-      value={val}
-      onChange={(e) => setVal(e.target.value === '' ? '' : parseInt(e.target.value))}
-      onBlur={(e) => {
-        const finalVal = parseInt(e.target.value) || 0;
-        setVal(finalVal);
-        if (finalVal !== initialValue) onSave(finalVal);
-      }}
-      className={className}
-      placeholder="0"
-    />
-  );
-};
-
 export default function TeamsMatrixDashboard() {
   const [activeServiceType, setActiveServiceType] = useState<'Sunday Service' | 'Midweek Service'>('Sunday Service');
   const [selectedMonth, setSelectedMonth] = useState(9);
@@ -69,21 +50,24 @@ export default function TeamsMatrixDashboard() {
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [visionTarget, setVisionTarget] = useState<number>(350);
-  const [savingServiceId, setSavingServiceId] = useState<string | null>(null);
 
+  // Dynamic Theme Config
   const theme = activeServiceType === 'Sunday Service' 
     ? {
-        bgPrimary: 'bg-[#034a36]', bgSecondary: 'bg-[#023325]', borderPrimary: 'border-emerald-500',
-        borderSecondary: 'border-emerald-600', textMuted: 'text-emerald-200', textAccent: 'text-emerald-300',
-        textHighlight: 'text-emerald-400', textData: 'text-emerald-700', badge: 'bg-emerald-400',
-        ring: 'focus:border-[#034a36]', hover: 'hover:bg-[#023325]'
+        bgPrimary: 'bg-[#034a36]',
+        bgSecondary: 'bg-[#023325]',
+        borderPrimary: 'border-emerald-500',
+        textMuted: 'text-emerald-200',
+        textAccent: 'text-emerald-300',
+        hover: 'hover:bg-[#023325]'
       }
     : {
-        bgPrimary: 'bg-[#4a1c15]', bgSecondary: 'bg-[#31100a]', borderPrimary: 'border-red-500',
-        borderSecondary: 'border-red-600', textMuted: 'text-red-200', textAccent: 'text-red-300',
-        textHighlight: 'text-red-400', textData: 'text-red-800', badge: 'bg-red-400',
-        ring: 'focus:border-[#4a1c15]', hover: 'hover:bg-[#31100a]'
+        bgPrimary: 'bg-[#4a1c15]',
+        bgSecondary: 'bg-[#31100a]', 
+        borderPrimary: 'border-red-500',
+        textMuted: 'text-red-200',
+        textAccent: 'text-red-300',
+        hover: 'hover:bg-[#31100a]'
       };
 
   const loadData = async () => {
@@ -93,24 +77,13 @@ export default function TeamsMatrixDashboard() {
       const data = await getMonthlyZoneReport(selectedYear, selectedMonth, activeServiceType);
       setReportData(data);
 
-      const { data: targetData } = await supabase
-        .from('monthly_targets')
-        .select('target_value')
-        .eq('year', selectedYear)
-        .eq('month', selectedMonth)
-        .eq('service_type', activeServiceType)
-        .single();
-      
-      if (targetData) setVisionTarget(targetData.target_value);
-      else setVisionTarget(350);
-
-      // Console Logger to help you identify misspelled teams in your DB
+      // Console Logger to identify unmapped DB teams
       if (data.members) {
         const dbTeams = [...new Set(data.members.map((m:any) => m.raw_team).filter(Boolean))];
         const allMatrixTeams = TEAM_GROUPS.flatMap(g => g.items).map(t => t.toLowerCase());
         const unmapped = dbTeams.filter((dbt: any) => !allMatrixTeams.includes(dbt.toLowerCase()));
         if (unmapped.length > 0) {
-          console.warn("These teams in your database don't perfectly match the Matrix layout:", unmapped);
+          console.warn("These teams in your DB don't match the Matrix layout:", unmapped);
         }
       }
 
@@ -123,41 +96,20 @@ export default function TeamsMatrixDashboard() {
 
   useEffect(() => {
     loadData();
+
+    // Listen to BOTH attendance check-ins and member profile changes (team updates)
     const channel = supabase
       .channel('teams-matrix-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => { loadData(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => {
+        loadData();
+      })
       .subscribe();
+
     return () => { supabase.removeChannel(channel); };
   }, [activeServiceType, selectedMonth, selectedYear]);
-
-  const handleServiceFieldUpdate = async (serviceId: string, field: 'manual_headcount' | 'souls_won', value: number) => {
-    if (!serviceId) return;
-    setSavingServiceId(serviceId);
-    try {
-      const { error } = await supabase.from('services').update({ [field]: value }).eq('id', serviceId);
-      if (error) throw error;
-      await loadData(); 
-    } catch (err: any) {
-      alert('Failed to save changes: ' + err.message);
-    } finally {
-      setSavingServiceId(null);
-    }
-  };
-
-  const handleTargetUpdate = async (val: number) => {
-    if (val === visionTarget) return;
-    setVisionTarget(val); 
-    try {
-      const { error } = await supabase.from('monthly_targets').upsert(
-        { year: selectedYear, month: selectedMonth, service_type: activeServiceType, target_value: val },
-        { onConflict: 'year,month,service_type' }
-      );
-      if (error) throw error;
-    } catch (err: any) {
-      alert('Failed to save Vision Target: ' + err.message);
-    }
-  };
 
   const handleDownload = async () => {
     const element = document.getElementById('teams-matrix-export-container');
@@ -184,7 +136,7 @@ export default function TeamsMatrixDashboard() {
 
   const { services = [], attendanceRecords = [], members = [] } = reportData || {};
 
-  // Smart Match Algorithm: Normalizes strings, handles plurals, and comma-separated arrays
+  // Smart Match Algorithm: Handles commas, trailing 's', etc.
   const isTeamMatch = (member: any, targetTeam: string) => {
     const rawDbTeam = (member?.raw_team || '').toLowerCase();
     const target = targetTeam.toLowerCase().trim();
@@ -209,40 +161,25 @@ export default function TeamsMatrixDashboard() {
   };
 
   const displayWeeks = [1, 2, 3, 4, 5];
-
-  const weeklyCardStats = displayWeeks.map(wkNum => {
-    const matchedServices = services.filter((s: any) => Number(s.week_number) === wkNum);
-    const hasService = matchedServices.length > 0;
-    const serviceIds = matchedServices.map((s: any) => s.id);
-    
-    const primaryService = hasService ? matchedServices[0] : null;
-    const firstServiceId = primaryService ? primaryService.id : null;
-    
-    const matchedRecords = attendanceRecords.filter((r: any) => serviceIds.includes(r.service_id));
-    const registeredCount = new Set(matchedRecords.map((r: any) => r.member_id)).size;
-    
-    const headcount = primaryService ? (Number(primaryService.manual_headcount) || 0) : 0;
-    const soulsWon = primaryService ? (Number(primaryService.souls_won) || 0) : 0;
-    const variance = headcount - registeredCount;
-
-    return {
-      weekNum: wkNum, serviceIds, firstServiceId,
-      dateStr: hasService ? primaryService.service_date : 'No Service Scheduled',
-      headcount, registered: registeredCount, soulsWon, variance
-    };
-  });
-
-  const totalMonthlyHeadcount = weeklyCardStats.reduce((acc, curr) => acc + curr.headcount, 0);
   const activeWeeksCount = services.length > 0 ? new Set(services.map((s: any) => s.week_number)).size : 1;
-  const averageAttendance = Math.round(totalMonthlyHeadcount / (activeWeeksCount || 1));
-  const milestonePercentage = visionTarget > 0 ? ((averageAttendance / visionTarget) * 100).toFixed(1) : '0.0';
 
   return (
-    <div className="w-full max-w-[1500px] flex flex-col gap-4 mx-auto text-gray-900 p-2 md:p-4">
+    <div className="w-full max-w-[1400px] flex flex-col gap-4 mx-auto text-gray-900 p-2 md:p-4">
+      {/* Controls Bar */}
       <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
         <div className="flex gap-2">
-          <button onClick={() => setActiveServiceType('Sunday Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#034a36] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Calendar className="w-4 h-4" /> Sunday Services</button>
-          <button onClick={() => setActiveServiceType('Midweek Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#4a1c15] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Users className="w-4 h-4" /> Midweek Services</button>
+          <button 
+            onClick={() => setActiveServiceType('Sunday Service')} 
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#034a36] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            <Calendar className="w-4 h-4" /> Sunday Services
+          </button>
+          <button 
+            onClick={() => setActiveServiceType('Midweek Service')} 
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#4a1c15] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            <Users className="w-4 h-4" /> Midweek Services
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 rounded-lg outline-none">
@@ -251,21 +188,30 @@ export default function TeamsMatrixDashboard() {
           <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 rounded-lg outline-none">
             {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
           </select>
-          <button onClick={handleDownload} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${theme.bgPrimary} text-white ${theme.hover}`}><Download className="w-4 h-4" /> Export PNG</button>
+          <button onClick={handleDownload} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${theme.bgPrimary} text-white ${theme.hover}`}>
+            <Download className="w-4 h-4" /> Export PNG
+          </button>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold"><AlertCircle className="w-5 h-5 shrink-0" /><p>{errorMsg}</p></div>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <p>{errorMsg}</p>
+        </div>
       )}
 
+      {/* Full-Width Matrix Export Container */}
       <div id="teams-matrix-export-container" className="bg-[#fefce8] p-4 md:p-6 rounded-2xl border border-yellow-200 shadow-xl font-sans">
         
+        {/* Header Banner */}
         <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex justify-between items-end border-b-4 ${theme.borderPrimary} mb-4 transition-colors`}>
           <div>
             <span className={`text-xs font-black ${theme.textAccent} uppercase tracking-widest block mb-1`}>Branch Attendance Report</span>
             <h1 className="text-3xl font-black tracking-wider uppercase mb-0.5">MZUZU BRANCH</h1>
-            <h2 className="text-[#facc15] text-sm font-black tracking-widest uppercase">{MONTHS[selectedMonth - 1]} {selectedYear} — {activeServiceType.toUpperCase()} TEAMS</h2>
+            <h2 className="text-[#facc15] text-sm font-black tracking-widest uppercase">
+              {MONTHS[selectedMonth - 1]} {selectedYear} — {activeServiceType.toUpperCase()} TEAMS REPORT
+            </h2>
           </div>
           <div className="text-right">
             <span className={`text-xs font-bold ${theme.textMuted} uppercase tracking-wider block`}>Generated Date</span>
@@ -273,130 +219,85 @@ export default function TeamsMatrixDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          
-          <div className="lg:col-span-4 flex flex-col gap-3">
-            {weeklyCardStats.map((wk) => {
-              const hasService = wk.firstServiceId !== null;
-              return (
-                <div key={wk.weekNum} className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
-                  <div className={`${theme.bgPrimary} text-white px-4 py-2 flex justify-between items-center text-sm font-black transition-colors`}>
-                    <span className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${theme.badge}`}></span> WEEK {wk.weekNum}</span>
-                    <span className={`${theme.textMuted} font-mono text-xs`}>{wk.dateStr}</span>
-                  </div>
-                  <div className="p-3 grid grid-cols-2 gap-3 text-sm">
-                    <div className="bg-white p-2 rounded-lg border-2 border-gray-400 shadow-sm flex flex-col justify-center">
-                      <span className="text-xs font-black text-gray-800 uppercase block mb-1">Headcount</span>
-                      <EditableNumberField initialValue={wk.headcount} onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'manual_headcount', val); }} disabled={!hasService || savingServiceId === wk.firstServiceId} className={`w-full bg-transparent text-2xl font-black text-gray-900 outline-none ${theme.ring} disabled:opacity-50`} />
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
-                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Registered</span>
-                      <span className={`text-xl font-black ${theme.textData}`}>{wk.registered}</span>
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
-                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Souls Won</span>
-                      <EditableNumberField initialValue={wk.soulsWon} onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', val); }} disabled={!hasService || savingServiceId === wk.firstServiceId} className={`w-full bg-transparent text-xl font-black text-red-600 outline-none ${theme.ring} disabled:opacity-50`} />
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
-                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Var</span>
-                      <span className={`text-xl font-black ${wk.variance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{wk.variance > 0 ? `+${wk.variance}` : wk.variance}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            <div className={`${theme.bgPrimary} text-white p-5 rounded-xl shadow-md border-b-4 ${theme.borderPrimary} transition-colors`}>
-              <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Monthly Performance</span>
-              <div className="flex justify-between items-end mt-1">
-                <span className="text-sm font-bold uppercase tracking-wider">Average Headcount</span>
-                <span className="text-3xl font-black text-[#facc15] font-mono">{averageAttendance}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-8 flex flex-col gap-4">
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-md">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className={`${theme.bgPrimary} text-white text-sm transition-colors`}>
-                    <th className="py-2.5 px-4 font-black tracking-wider uppercase">NAME</th>
-                    <th className={`py-2.5 px-2 font-black tracking-wider text-center ${theme.textMuted} w-14`}>MEM.</th>
-                    {displayWeeks.map(wk => (
-                      <th key={wk} className={`py-2.5 px-2 font-black tracking-wider text-center ${theme.textMuted} w-14`}>WK{wk}</th>
-                    ))}
-                    <th className={`py-2.5 px-3 font-black tracking-wider text-center text-[#facc15] ${theme.bgSecondary} w-16`}>AVE.</th>
-                    <th className={`py-2.5 px-4 font-black tracking-wider text-center text-gray-900 bg-[#fef08a] w-20`}>AVE.%</th>
+        {/* Matrix Table Full Width */}
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-md">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className={`${theme.bgPrimary} text-white text-sm transition-colors`}>
+                <th className="py-3 px-5 font-black tracking-wider uppercase w-[35%]">NAME</th>
+                <th className={`py-3 px-3 font-black tracking-wider text-center ${theme.textMuted} w-16`}>MEM.</th>
+                {displayWeeks.map(wk => (
+                  <th key={wk} className={`py-3 px-3 font-black tracking-wider text-center ${theme.textMuted} w-16`}>WK{wk}</th>
+                ))}
+                <th className={`py-3 px-4 font-black tracking-wider text-center text-[#facc15] ${theme.bgSecondary} w-20`}>AVE.</th>
+                <th className={`py-3 px-4 font-black tracking-wider text-center text-gray-900 bg-[#fef08a] w-24`}>AVE.%</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {TEAM_GROUPS.map((group, gIdx) => (
+                <Fragment key={gIdx}>
+                  {/* Yellow Category Headers */}
+                  <tr className="bg-[#fef08a] border-y border-yellow-300 text-gray-900 font-black uppercase tracking-wider text-xs">
+                    <td colSpan={9} className="py-2.5 px-5 flex items-center gap-2">
+                      <span className="bg-gray-900 text-yellow-300 w-4 h-4 rounded-sm flex items-center justify-center text-[10px]">∇</span> 
+                      {group.groupName}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 text-sm">
-                  {TEAM_GROUPS.map((group, gIdx) => (
-                    <Fragment key={gIdx}>
-                      <tr className="bg-[#fef08a] border-y border-yellow-300 text-gray-900 font-black uppercase tracking-wider text-xs">
-                        <td colSpan={9} className="py-2 px-4 flex items-center gap-2">
-                          <span className="bg-gray-900 text-yellow-300 w-4 h-4 rounded-sm flex items-center justify-center text-[10px]">∇</span> {group.groupName}
+                  
+                  {/* Team Rows */}
+                  {group.items.map((itemName, iIdx) => {
+                    
+                    // 1. Calculate base member count (Updates instantly if member changes team)
+                    const memCount = members.filter((m: any) => isTeamMatch(m, itemName)).length;
+
+                    // 2. Calculate weekly attendance for this specific team
+                    const weeklyCounts = displayWeeks.map(wkNum => {
+                      const matchedServices = services.filter((s: any) => Number(s.week_number) === wkNum);
+                      if (matchedServices.length === 0) return 0;
+                      
+                      const serviceIds = matchedServices.map((s: any) => s.id);
+                      return attendanceRecords.filter((r: any) => {
+                        if (!serviceIds.includes(r.service_id)) return false;
+                        const memberObj = r.members;
+                        return memberObj && isTeamMatch(memberObj, itemName);
+                      }).length;
+                    });
+
+                    // 3. Averages & Percentages
+                    const totalAttended = weeklyCounts.reduce((sum, val) => sum + val, 0);
+                    const avg = totalAttended > 0 ? Math.round(totalAttended / activeWeeksCount) : 0;
+                    const avgPercent = memCount > 0 ? Math.round((avg / memCount) * 100) : 0;
+
+                    return (
+                      <tr key={iIdx} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                        <td className="py-2.5 px-5 font-bold text-gray-900">{itemName}</td>
+                        
+                        {/* Member Base Count */}
+                        <td className="py-2.5 px-3 text-center font-black text-gray-600 bg-gray-50/50 text-base">
+                          {memCount}
+                        </td>
+
+                        {/* Weekly Columns */}
+                        {weeklyCounts.map((count, wIdx) => (
+                          <td key={wIdx} className="py-2.5 px-3 text-center font-mono font-black text-base">
+                            {count > 0 ? <span className="text-gray-900">{count}</span> : <span className="text-gray-300">0</span>}
+                          </td>
+                        ))}
+
+                        {/* Averages */}
+                        <td className="py-2.5 px-4 text-center font-black bg-[#fefce8] text-gray-900 text-base">
+                          {avg}
+                        </td>
+                        <td className="py-2.5 px-4 text-center font-black bg-[#fef08a] text-gray-900 text-base">
+                          {avgPercent}%
                         </td>
                       </tr>
-                      {group.items.map((itemName, iIdx) => {
-                        
-                        const memCount = members.filter((m: any) => isTeamMatch(m, itemName)).length;
-
-                        const weeklyCounts = displayWeeks.map(wkNum => {
-                          const matchedServices = services.filter((s: any) => Number(s.week_number) === wkNum);
-                          if (matchedServices.length === 0) return 0;
-                          
-                          const serviceIds = matchedServices.map((s: any) => s.id);
-                          return attendanceRecords.filter((r: any) => {
-                            if (!serviceIds.includes(r.service_id)) return false;
-                            const memberObj = r.members;
-                            return memberObj && isTeamMatch(memberObj, itemName);
-                          }).length;
-                        });
-
-                        const totalAttended = weeklyCounts.reduce((sum, val) => sum + val, 0);
-                        const avg = totalAttended > 0 ? Math.round(totalAttended / activeWeeksCount) : 0;
-                        const avgPercent = memCount > 0 ? Math.round((avg / memCount) * 100) : 0;
-
-                        return (
-                          <tr key={iIdx} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                            <td className="py-2 px-4 font-bold text-gray-900">{itemName}</td>
-                            <td className="py-2 px-2 text-center font-black text-gray-600 bg-gray-50/50 text-base">{memCount}</td>
-                            {weeklyCounts.map((count, wIdx) => (
-                              <td key={wIdx} className="py-2 px-2 text-center font-mono font-black text-base">
-                                {count > 0 ? <span className="text-gray-900">{count}</span> : <span className="text-gray-300">0</span>}
-                              </td>
-                            ))}
-                            <td className="py-2 px-3 text-center font-black bg-[#fefce8] text-gray-900 text-base">{avg}</td>
-                            <td className="py-2 px-4 text-center font-black bg-[#fef08a] text-gray-900 text-base">{avgPercent}%</td>
-                          </tr>
-                        );
-                      })}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <div className={`${theme.bgPrimary} text-white p-5 rounded-xl flex flex-col sm:flex-row justify-between items-center shadow-md border-b-4 ${theme.borderPrimary} gap-4 transition-colors`}>
-              <div>
-                <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Strategic Goal</span>
-                <span className="text-xl font-black tracking-wider">VISION 100% TARGET</span>
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="text-right flex flex-col items-end">
-                  <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block mb-1`}>Target</span>
-                  <EditableNumberField 
-                    initialValue={visionTarget} 
-                    onSave={handleTargetUpdate} 
-                    className={`w-28 bg-black/20 border-2 border-black/30 rounded-lg px-3 py-1 text-2xl font-black text-[#facc15] font-mono text-right outline-none focus:bg-black/40 transition-all ${theme.ring}`}
-                  />
-                </div>
-                <div className={`${theme.bgSecondary} px-5 py-3 rounded-xl border ${theme.borderSecondary} text-right`}>
-                  <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Milestone Status</span>
-                  <span className={`text-2xl font-black ${theme.textHighlight} font-mono`}>{milestonePercentage}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
