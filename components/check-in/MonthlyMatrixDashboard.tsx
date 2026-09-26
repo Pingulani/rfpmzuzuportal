@@ -27,6 +27,35 @@ export default function ZonesMatrixDashboard() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Dynamic Theme Config: Green for Sunday, Dark Reddish-Brown for Midweek
+  const theme = activeServiceType === 'Sunday Service' 
+    ? {
+        bgPrimary: 'bg-[#034a36]',
+        bgSecondary: 'bg-[#023325]',
+        borderPrimary: 'border-emerald-500',
+        borderSecondary: 'border-emerald-600',
+        textMuted: 'text-emerald-200',
+        textAccent: 'text-emerald-300',
+        textHighlight: 'text-emerald-400',
+        textData: 'text-emerald-700',
+        badge: 'bg-emerald-400',
+        ring: 'focus:border-[#034a36]',
+        hover: 'hover:bg-[#023325]'
+      }
+    : {
+        bgPrimary: 'bg-[#4a1c15]', // Rich Dark Reddish-Brown
+        bgSecondary: 'bg-[#31100a]', 
+        borderPrimary: 'border-red-500',
+        borderSecondary: 'border-red-600',
+        textMuted: 'text-red-200',
+        textAccent: 'text-red-300',
+        textHighlight: 'text-red-400',
+        textData: 'text-red-800',
+        badge: 'bg-red-400',
+        ring: 'focus:border-[#4a1c15]',
+        hover: 'hover:bg-[#31100a]'
+      };
+
   const loadData = async () => {
     setLoading(true);
     setErrorMsg(null);
@@ -53,7 +82,6 @@ export default function ZonesMatrixDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [activeServiceType, selectedMonth, selectedYear]);
 
-  // Saves to Supabase only when user finishes typing and clicks away
   const handleServiceFieldUpdate = async (serviceId: string, field: 'manual_headcount' | 'souls_won', value: number) => {
     if (!serviceId) return;
 
@@ -64,7 +92,7 @@ export default function ZonesMatrixDashboard() {
         .eq('id', serviceId);
 
       if (error) throw error;
-      await loadData(); // Force a fresh pull from Supabase immediately after saving
+      await loadData(); 
     } catch (err: any) {
       console.error('Error updating service field:', err);
       alert('Failed to save changes: ' + err.message);
@@ -156,7 +184,7 @@ export default function ZonesMatrixDashboard() {
           </button>
           <button 
             onClick={() => setActiveServiceType('Midweek Service')} 
-            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#034a36] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#4a1c15] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             <Users className="w-4 h-4" /> Midweek Services
           </button>
@@ -168,7 +196,7 @@ export default function ZonesMatrixDashboard() {
           <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 rounded-lg outline-none">
             {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
           </select>
-          <button onClick={handleDownload} className="px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 bg-[#034a36] text-white hover:bg-[#023325]">
+          <button onClick={handleDownload} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${theme.bgPrimary} text-white ${theme.hover}`}>
             <Download className="w-4 h-4" /> Export PNG
           </button>
         </div>
@@ -183,16 +211,16 @@ export default function ZonesMatrixDashboard() {
 
       <div id="zones-matrix-export-container" className="bg-[#fefce8] p-4 md:p-6 rounded-2xl border border-yellow-200 shadow-xl font-sans">
         
-        <div className="bg-[#034a36] text-white px-6 py-4 rounded-t-xl flex justify-between items-end border-b-4 border-emerald-500 mb-4">
+        <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex justify-between items-end border-b-4 ${theme.borderPrimary} mb-4 transition-colors`}>
           <div>
-            <span className="text-[10px] font-black text-emerald-300 uppercase tracking-widest block mb-1">Branch Attendance Report</span>
+            <span className={`text-[10px] font-black ${theme.textAccent} uppercase tracking-widest block mb-1`}>Branch Attendance Report</span>
             <h1 className="text-2xl font-black tracking-wider uppercase mb-0.5">MZUZU BRANCH</h1>
             <h2 className="text-[#facc15] text-xs font-black tracking-widest uppercase">
               {MONTHS[selectedMonth - 1]} {selectedYear} — {activeServiceType.toUpperCase()} ZONES
             </h2>
           </div>
           <div className="text-right">
-            <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider block">Generated Date</span>
+            <span className={`text-[10px] font-bold ${theme.textMuted} uppercase tracking-wider block`}>Generated Date</span>
             <span className="text-sm font-black text-white">{new Date().toLocaleDateString('en-GB')}</span>
           </div>
         </div>
@@ -204,53 +232,51 @@ export default function ZonesMatrixDashboard() {
               const hasService = wk.firstServiceId !== null;
               return (
                 <div key={wk.weekNum} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div className="bg-[#034a36] text-white px-3 py-1.5 flex justify-between items-center text-xs font-black">
+                  <div className={`${theme.bgPrimary} text-white px-3 py-1.5 flex justify-between items-center text-xs font-black transition-colors`}>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span> WEEK {wk.weekNum}
+                      <span className={`w-2 h-2 rounded-full ${theme.badge}`}></span> WEEK {wk.weekNum}
                     </span>
-                    <span className="text-emerald-200 font-mono text-[11px]">{wk.dateStr}</span>
+                    <span className={`${theme.textMuted} font-mono text-[11px]`}>{wk.dateStr}</span>
                   </div>
                   <div className="p-3 grid grid-cols-2 gap-2 text-xs">
                     
-                    {/* Fixed Headcount Input: Uses onBlur to save when done typing */}
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
                       <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Headcount (Edit)</span>
                       <input 
                         type="number"
                         disabled={!hasService}
                         defaultValue={wk.headcount}
-                        key={`headcount-${wk.firstServiceId}-${wk.headcount}`} // Forces update strictly from Supabase
+                        key={`headcount-${wk.firstServiceId}-${wk.headcount}`} 
                         onBlur={(e) => {
                           const val = parseInt(e.target.value) || 0;
                           if (wk.firstServiceId && val !== wk.headcount) {
                             handleServiceFieldUpdate(wk.firstServiceId, 'manual_headcount', val);
                           }
                         }}
-                        className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-gray-900 outline-none focus:border-[#034a36] disabled:opacity-50"
+                        className={`w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-gray-900 outline-none ${theme.ring} disabled:opacity-50`}
                         placeholder="0"
                       />
                     </div>
 
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col justify-between">
                       <span className="text-[10px] font-bold text-gray-400 uppercase block">Registered</span>
-                      <span className="text-base font-black text-emerald-700">{wk.registered}</span>
+                      <span className={`text-base font-black ${theme.textData}`}>{wk.registered}</span>
                     </div>
 
-                    {/* Fixed Souls Won Input: Uses onBlur to save when done typing */}
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
                       <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Souls Won (Edit)</span>
                       <input 
                         type="number"
                         disabled={!hasService}
                         defaultValue={wk.soulsWon}
-                        key={`soulswon-${wk.firstServiceId}-${wk.soulsWon}`} // Forces update strictly from Supabase
+                        key={`soulswon-${wk.firstServiceId}-${wk.soulsWon}`}
                         onBlur={(e) => {
                           const val = parseInt(e.target.value) || 0;
                           if (wk.firstServiceId && val !== wk.soulsWon) {
                             handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', val);
                           }
                         }}
-                        className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-red-600 outline-none focus:border-[#034a36] disabled:opacity-50"
+                        className={`w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-red-600 outline-none ${theme.ring} disabled:opacity-50`}
                         placeholder="0"
                       />
                     </div>
@@ -267,8 +293,8 @@ export default function ZonesMatrixDashboard() {
               );
             })}
 
-            <div className="bg-[#034a36] text-white p-4 rounded-xl shadow-md border-b-4 border-emerald-500">
-              <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest block">Monthly Performance</span>
+            <div className={`${theme.bgPrimary} text-white p-4 rounded-xl shadow-md border-b-4 ${theme.borderPrimary} transition-colors`}>
+              <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Monthly Performance</span>
               <div className="flex justify-between items-end mt-1">
                 <span className="text-xs font-bold uppercase tracking-wider">Average Attendance</span>
                 <span className="text-2xl font-black text-[#facc15] font-mono">{averageAttendance}</span>
@@ -280,12 +306,12 @@ export default function ZonesMatrixDashboard() {
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#034a36] text-white text-[11px]">
+                  <tr className={`${theme.bgPrimary} text-white text-[11px] transition-colors`}>
                     <th className="py-3 px-4 font-black tracking-wider uppercase">ZONES / CATEGORY</th>
                     {displayWeeks.map(wk => (
-                      <th key={wk} className="py-3 px-2 font-black tracking-wider text-center text-emerald-200 w-12">WK{wk}</th>
+                      <th key={wk} className={`py-3 px-2 font-black tracking-wider text-center ${theme.textMuted} w-12`}>WK{wk}</th>
                     ))}
-                    <th className="py-3 px-3 font-black tracking-wider text-center text-[#facc15] bg-[#023325] w-16">AVG</th>
+                    <th className={`py-3 px-3 font-black tracking-wider text-center text-[#facc15] ${theme.bgSecondary} w-16`}>AVG</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-xs">
@@ -329,19 +355,19 @@ export default function ZonesMatrixDashboard() {
               </table>
             </div>
             
-            <div className="bg-[#034a36] text-white p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center shadow-md border-b-4 border-emerald-500 gap-4">
+            <div className={`${theme.bgPrimary} text-white p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center shadow-md border-b-4 ${theme.borderPrimary} gap-4 transition-colors`}>
               <div>
-                <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest block">Strategic Goal</span>
+                <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Strategic Goal</span>
                 <span className="text-lg font-black tracking-wider">VISION 100% TARGET</span>
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-right">
-                  <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest block">Target</span>
+                  <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Target</span>
                   <span className="text-xl font-black text-[#facc15] font-mono">350</span>
                 </div>
-                <div className="bg-[#023325] px-4 py-2 rounded-xl border border-emerald-600 text-right">
-                  <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest block">Milestone Status</span>
-                  <span className="text-lg font-black text-emerald-400 font-mono">50.6%</span>
+                <div className={`${theme.bgSecondary} px-4 py-2 rounded-xl border ${theme.borderSecondary} text-right`}>
+                  <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Milestone Status</span>
+                  <span className={`text-lg font-black ${theme.textHighlight} font-mono`}>50.6%</span>
                 </div>
               </div>
             </div>
