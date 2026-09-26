@@ -18,7 +18,7 @@ const ZONE_GROUPS = [
   { groupName: "OTHER", items: ["Other Branches", "Special Services", "New Members", "Unknown Zone or Not in a Zone"] }
 ];
 
-// Helper Component: Ensures html2canvas captures typed input by binding explicitly to 'value'
+// Helper Component: Binds explicitly to 'value' so html2canvas successfully exports the typed numbers
 const EditableNumberField = ({ initialValue, onSave, disabled, className }: { initialValue: number, onSave: (val: number) => void, disabled?: boolean, className: string }) => {
   const [val, setVal] = useState<number | string>(initialValue);
   
@@ -203,22 +203,23 @@ export default function ZonesMatrixDashboard() {
     const matchedServices = services.filter((s: any) => Number(s.week_number) === wkNum);
     const hasService = matchedServices.length > 0;
     const serviceIds = matchedServices.map((s: any) => s.id);
-    const firstServiceId = hasService ? matchedServices[0].id : null;
+    
+    const primaryService = hasService ? matchedServices[0] : null;
+    const firstServiceId = primaryService ? primaryService.id : null;
     
     const matchedRecords = attendanceRecords.filter((r: any) => serviceIds.includes(r.service_id));
     const registeredCount = new Set(matchedRecords.map((r: any) => r.member_id)).size;
     
-    const headcount = matchedServices.reduce((acc: number, s: any) => acc + (Number(s.manual_headcount) || 0), 0);
-    const soulsWon = matchedServices.reduce((acc: number, s: any) => acc + (Number(s.souls_won) || 0), 0);
+    const headcount = primaryService ? (Number(primaryService.manual_headcount) || 0) : 0;
+    const soulsWon = primaryService ? (Number(primaryService.souls_won) || 0) : 0;
     
-    // Variance is strictly Registered minus Headcount
-    const variance = registeredCount - headcount;
+    const variance = headcount - registeredCount;
 
     return {
       weekNum: wkNum,
       serviceIds,
       firstServiceId,
-      dateStr: hasService ? matchedServices[0].service_date : 'No Service Scheduled',
+      dateStr: hasService ? primaryService.service_date : 'No Service Scheduled',
       headcount,
       registered: registeredCount,
       soulsWon,
@@ -300,9 +301,8 @@ export default function ZonesMatrixDashboard() {
                   </div>
                   <div className="p-3 grid grid-cols-2 gap-3 text-sm">
                     
-                    {/* PROMINENT Headcount Input */}
                     <div className="bg-white p-2 rounded-lg border-2 border-gray-400 shadow-sm flex flex-col justify-center">
-                      <span className="text-xs font-black text-gray-800 uppercase block mb-1">Headcount (Edit)</span>
+                      <span className="text-xs font-black text-gray-800 uppercase block mb-1">Headcount</span>
                       <EditableNumberField 
                         initialValue={wk.headcount} 
                         onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'manual_headcount', val); }}
@@ -317,7 +317,7 @@ export default function ZonesMatrixDashboard() {
                     </div>
 
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
-                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Souls Won (Edit)</span>
+                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Souls Won</span>
                       <EditableNumberField 
                         initialValue={wk.soulsWon} 
                         onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', val); }}
@@ -327,9 +327,9 @@ export default function ZonesMatrixDashboard() {
                     </div>
 
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
-                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Variance (Reg-Head)</span>
+                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Var</span>
                       <span className={`text-xl font-black ${wk.variance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {wk.variance >= 0 ? `+${wk.variance}` : wk.variance}
+                        {wk.variance > 0 ? `+${wk.variance}` : wk.variance}
                       </span>
                     </div>
 
@@ -408,7 +408,7 @@ export default function ZonesMatrixDashboard() {
               <div className="flex items-center gap-6">
                 
                 <div className="text-right flex flex-col items-end">
-                  <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block mb-1`}>Target (Edit)</span>
+                  <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block mb-1`}>Target</span>
                   <EditableNumberField 
                     initialValue={visionTarget} 
                     onSave={handleTargetUpdate} 
