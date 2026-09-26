@@ -2,24 +2,21 @@ import { supabase } from '../utils/supabase';
 
 export async function getMonthlyZoneReport(year: number, month: number, serviceType: string) {
   try {
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const lastDay = new Date(year, month, 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-
-    // 1. Fetch all services for the selected month & type
-    const { data: servicesData, error: servicesError } = await supabase
+    // 1. Fetch all services by type (Bypasses SQL date-parsing issues)
+    const { data: allServices, error: servicesError } = await supabase
       .from('services')
       .select('*')
-      .eq('service_type', serviceType)
-      .gte('service_date', startDate)
-      .lte('service_date', endDate);
+      .eq('service_type', serviceType);
 
     if (servicesError) throw servicesError;
 
-    // Gather all service IDs
-    const serviceIds = (servicesData || []).map((s: any) => s.id);
+    // 2. Filter for the specific month in JavaScript (e.g., "2026-09")
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`; 
+    const servicesData = (allServices || []).filter(s => (s.service_date || '').startsWith(monthPrefix));
+    
+    const serviceIds = servicesData.map(s => s.id);
 
-    // 2. Fetch all attendance records tied to any of those service IDs, joining member profiles
+    // 3. Fetch attendance tied to those specific services
     let attendanceData: any[] = [];
     if (serviceIds.length > 0) {
       const { data: attData, error: attError } = await supabase
@@ -43,7 +40,7 @@ export async function getMonthlyZoneReport(year: number, month: number, serviceT
       attendanceData = attData || [];
     }
 
-    // 3. Fetch all members
+    // 4. Fetch all members for baseline counts
     const { data: membersData, error: membersError } = await supabase
       .from('members')
       .select('*');
@@ -51,13 +48,13 @@ export async function getMonthlyZoneReport(year: number, month: number, serviceT
     if (membersError) throw membersError;
 
     return {
-      services: servicesData || [],
+      services: servicesData,
       attendanceRecords: attendanceData,
       members: membersData || []
     };
 
-  } catch (err) {
-    console.error('Error fetching monthly report:', err);
-    return { services: [], attendanceRecords: [], members: [] };
+  } catch (err: any) {
+    console.error('Matrix Data Fetch Error:', err.message);
+    throw err;
   }
 }
