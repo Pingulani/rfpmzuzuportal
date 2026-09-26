@@ -18,6 +18,29 @@ const ZONE_GROUPS = [
   { groupName: "OTHER", items: ["Other Branches", "Special Services", "New Members", "Unknown Zone or Not in a Zone"] }
 ];
 
+// Helper Component: Ensures html2canvas captures typed input by binding explicitly to 'value'
+const EditableNumberField = ({ initialValue, onSave, disabled, className }: { initialValue: number, onSave: (val: number) => void, disabled?: boolean, className: string }) => {
+  const [val, setVal] = useState<number | string>(initialValue);
+  
+  useEffect(() => { setVal(initialValue); }, [initialValue]);
+
+  return (
+    <input 
+      type="number"
+      disabled={disabled}
+      value={val}
+      onChange={(e) => setVal(e.target.value === '' ? '' : parseInt(e.target.value))}
+      onBlur={(e) => {
+        const finalVal = parseInt(e.target.value) || 0;
+        setVal(finalVal);
+        if (finalVal !== initialValue) onSave(finalVal);
+      }}
+      className={className}
+      placeholder="0"
+    />
+  );
+};
+
 export default function ZonesMatrixDashboard() {
   const [activeServiceType, setActiveServiceType] = useState<'Sunday Service' | 'Midweek Service'>('Sunday Service');
   const [selectedMonth, setSelectedMonth] = useState(9);
@@ -27,6 +50,7 @@ export default function ZonesMatrixDashboard() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [visionTarget, setVisionTarget] = useState<number>(350);
+  const [savingServiceId, setSavingServiceId] = useState<string | null>(null);
 
   const theme = activeServiceType === 'Sunday Service' 
     ? {
@@ -63,7 +87,6 @@ export default function ZonesMatrixDashboard() {
       const data = await getMonthlyZoneReport(selectedYear, selectedMonth, activeServiceType);
       setReportData(data);
 
-      // Fetch the Vision 100 target for this specific month/type
       const { data: targetData } = await supabase
         .from('monthly_targets')
         .select('target_value')
@@ -73,7 +96,7 @@ export default function ZonesMatrixDashboard() {
         .single();
       
       if (targetData) setVisionTarget(targetData.target_value);
-      else setVisionTarget(350); // Default if none set yet
+      else setVisionTarget(350);
 
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to load matrix data.');
@@ -97,6 +120,7 @@ export default function ZonesMatrixDashboard() {
 
   const handleServiceFieldUpdate = async (serviceId: string, field: 'manual_headcount' | 'souls_won', value: number) => {
     if (!serviceId) return;
+    setSavingServiceId(serviceId);
     try {
       const { error } = await supabase
         .from('services')
@@ -108,6 +132,8 @@ export default function ZonesMatrixDashboard() {
     } catch (err: any) {
       console.error('Error updating service field:', err);
       alert('Failed to save changes: ' + err.message);
+    } finally {
+      setSavingServiceId(null);
     }
   };
 
@@ -119,15 +145,9 @@ export default function ZonesMatrixDashboard() {
       const { error } = await supabase
         .from('monthly_targets')
         .upsert(
-          { 
-            year: selectedYear, 
-            month: selectedMonth, 
-            service_type: activeServiceType, 
-            target_value: val 
-          },
-          { onConflict: 'year,month,service_type' } // Uses the UNIQUE constraint we created
+          { year: selectedYear, month: selectedMonth, service_type: activeServiceType, target_value: val },
+          { onConflict: 'year,month,service_type' }
         );
-
       if (error) throw error;
     } catch (err: any) {
       console.error('Error saving target:', err);
@@ -190,6 +210,8 @@ export default function ZonesMatrixDashboard() {
     
     const headcount = matchedServices.reduce((acc: number, s: any) => acc + (Number(s.manual_headcount) || 0), 0);
     const soulsWon = matchedServices.reduce((acc: number, s: any) => acc + (Number(s.souls_won) || 0), 0);
+    
+    // Variance is strictly Registered minus Headcount
     const variance = registeredCount - headcount;
 
     return {
@@ -204,16 +226,13 @@ export default function ZonesMatrixDashboard() {
     };
   });
 
-  // Calculate Average from HEADCOUNT as requested
   const totalMonthlyHeadcount = weeklyCardStats.reduce((acc, curr) => acc + curr.headcount, 0);
   const activeWeeksCount = services.length > 0 ? new Set(services.map((s: any) => s.week_number)).size : 1;
   const averageAttendance = Math.round(totalMonthlyHeadcount / (activeWeeksCount || 1));
-
-  // Auto-calculate Milestone Status %
   const milestonePercentage = visionTarget > 0 ? ((averageAttendance / visionTarget) * 100).toFixed(1) : '0.0';
 
   return (
-    <div className="w-full max-w-[1450px] flex flex-col gap-4 mx-auto text-gray-900 p-2 md:p-4">
+    <div className="w-full max-w-[1500px] flex flex-col gap-4 mx-auto text-gray-900 p-2 md:p-4">
       <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
         <div className="flex gap-2">
           <button 
@@ -249,19 +268,20 @@ export default function ZonesMatrixDashboard() {
         </div>
       )}
 
+      {/* Matrix Export Container */}
       <div id="zones-matrix-export-container" className="bg-[#fefce8] p-4 md:p-6 rounded-2xl border border-yellow-200 shadow-xl font-sans">
         
         <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex justify-between items-end border-b-4 ${theme.borderPrimary} mb-4 transition-colors`}>
           <div>
-            <span className={`text-[10px] font-black ${theme.textAccent} uppercase tracking-widest block mb-1`}>Branch Attendance Report</span>
-            <h1 className="text-2xl font-black tracking-wider uppercase mb-0.5">MZUZU BRANCH</h1>
-            <h2 className="text-[#facc15] text-xs font-black tracking-widest uppercase">
+            <span className={`text-xs font-black ${theme.textAccent} uppercase tracking-widest block mb-1`}>Branch Attendance Report</span>
+            <h1 className="text-3xl font-black tracking-wider uppercase mb-0.5">MZUZU BRANCH</h1>
+            <h2 className="text-[#facc15] text-sm font-black tracking-widest uppercase">
               {MONTHS[selectedMonth - 1]} {selectedYear} — {activeServiceType.toUpperCase()} ZONES
             </h2>
           </div>
           <div className="text-right">
-            <span className={`text-[10px] font-bold ${theme.textMuted} uppercase tracking-wider block`}>Generated Date</span>
-            <span className="text-sm font-black text-white">{new Date().toLocaleDateString('en-GB')}</span>
+            <span className={`text-xs font-bold ${theme.textMuted} uppercase tracking-wider block`}>Generated Date</span>
+            <span className="text-base font-black text-white">{new Date().toLocaleDateString('en-GB')}</span>
           </div>
         </div>
 
@@ -271,59 +291,44 @@ export default function ZonesMatrixDashboard() {
             {weeklyCardStats.map((wk) => {
               const hasService = wk.firstServiceId !== null;
               return (
-                <div key={wk.weekNum} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div className={`${theme.bgPrimary} text-white px-3 py-1.5 flex justify-between items-center text-xs font-black transition-colors`}>
-                    <span className="flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full ${theme.badge}`}></span> WEEK {wk.weekNum}
+                <div key={wk.weekNum} className="bg-white rounded-xl border border-gray-200 shadow-md overflow-hidden">
+                  <div className={`${theme.bgPrimary} text-white px-4 py-2 flex justify-between items-center text-sm font-black transition-colors`}>
+                    <span className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${theme.badge}`}></span> WEEK {wk.weekNum}
                     </span>
-                    <span className={`${theme.textMuted} font-mono text-[11px]`}>{wk.dateStr}</span>
+                    <span className={`${theme.textMuted} font-mono text-xs`}>{wk.dateStr}</span>
                   </div>
-                  <div className="p-3 grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-3 grid grid-cols-2 gap-3 text-sm">
                     
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Headcount (Edit)</span>
-                      <input 
-                        type="number"
-                        disabled={!hasService}
-                        defaultValue={wk.headcount}
-                        key={`headcount-${wk.firstServiceId}-${wk.headcount}`} 
-                        onBlur={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          if (wk.firstServiceId && val !== wk.headcount) {
-                            handleServiceFieldUpdate(wk.firstServiceId, 'manual_headcount', val);
-                          }
-                        }}
-                        className={`w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-gray-900 outline-none ${theme.ring} disabled:opacity-50`}
-                        placeholder="0"
+                    {/* PROMINENT Headcount Input */}
+                    <div className="bg-white p-2 rounded-lg border-2 border-gray-400 shadow-sm flex flex-col justify-center">
+                      <span className="text-xs font-black text-gray-800 uppercase block mb-1">Headcount (Edit)</span>
+                      <EditableNumberField 
+                        initialValue={wk.headcount} 
+                        onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'manual_headcount', val); }}
+                        disabled={!hasService || savingServiceId === wk.firstServiceId}
+                        className={`w-full bg-transparent text-2xl font-black text-gray-900 outline-none ${theme.ring} disabled:opacity-50`}
                       />
                     </div>
 
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col justify-between">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase block">Registered</span>
-                      <span className={`text-base font-black ${theme.textData}`}>{wk.registered}</span>
+                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
+                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Registered</span>
+                      <span className={`text-xl font-black ${theme.textData}`}>{wk.registered}</span>
                     </div>
 
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Souls Won (Edit)</span>
-                      <input 
-                        type="number"
-                        disabled={!hasService}
-                        defaultValue={wk.soulsWon}
-                        key={`soulswon-${wk.firstServiceId}-${wk.soulsWon}`}
-                        onBlur={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          if (wk.firstServiceId && val !== wk.soulsWon) {
-                            handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', val);
-                          }
-                        }}
-                        className={`w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm font-black text-red-600 outline-none ${theme.ring} disabled:opacity-50`}
-                        placeholder="0"
+                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
+                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Souls Won (Edit)</span>
+                      <EditableNumberField 
+                        initialValue={wk.soulsWon} 
+                        onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', val); }}
+                        disabled={!hasService || savingServiceId === wk.firstServiceId}
+                        className={`w-full bg-transparent text-xl font-black text-red-600 outline-none ${theme.ring} disabled:opacity-50`}
                       />
                     </div>
 
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col justify-between">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase block">Variance (Reg-Head)</span>
-                      <span className={`text-base font-black ${wk.variance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
+                      <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Variance (Reg-Head)</span>
+                      <span className={`text-xl font-black ${wk.variance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                         {wk.variance >= 0 ? `+${wk.variance}` : wk.variance}
                       </span>
                     </div>
@@ -333,32 +338,32 @@ export default function ZonesMatrixDashboard() {
               );
             })}
 
-            <div className={`${theme.bgPrimary} text-white p-4 rounded-xl shadow-md border-b-4 ${theme.borderPrimary} transition-colors`}>
-              <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Monthly Performance</span>
+            <div className={`${theme.bgPrimary} text-white p-5 rounded-xl shadow-md border-b-4 ${theme.borderPrimary} transition-colors`}>
+              <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Monthly Performance</span>
               <div className="flex justify-between items-end mt-1">
-                <span className="text-xs font-bold uppercase tracking-wider">Average Headcount</span>
-                <span className="text-2xl font-black text-[#facc15] font-mono">{averageAttendance}</span>
+                <span className="text-sm font-bold uppercase tracking-wider">Average Headcount</span>
+                <span className="text-3xl font-black text-[#facc15] font-mono">{averageAttendance}</span>
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-8 flex flex-col gap-4">
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-md">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className={`${theme.bgPrimary} text-white text-[11px] transition-colors`}>
-                    <th className="py-3 px-4 font-black tracking-wider uppercase">ZONES / CATEGORY</th>
+                  <tr className={`${theme.bgPrimary} text-white text-sm transition-colors`}>
+                    <th className="py-2.5 px-4 font-black tracking-wider uppercase">ZONES / CATEGORY</th>
                     {displayWeeks.map(wk => (
-                      <th key={wk} className={`py-3 px-2 font-black tracking-wider text-center ${theme.textMuted} w-12`}>WK{wk}</th>
+                      <th key={wk} className={`py-2.5 px-2 font-black tracking-wider text-center ${theme.textMuted} w-14`}>WK{wk}</th>
                     ))}
-                    <th className={`py-3 px-3 font-black tracking-wider text-center text-[#facc15] ${theme.bgSecondary} w-16`}>AVG</th>
+                    <th className={`py-2.5 px-3 font-black tracking-wider text-center text-[#facc15] ${theme.bgSecondary} w-20`}>AVG</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-xs">
+                <tbody className="divide-y divide-gray-100 text-sm">
                   {ZONE_GROUPS.map((group, gIdx) => (
                     <Fragment key={gIdx}>
-                      <tr className="bg-[#fef08a] border-y border-yellow-300 text-gray-900 font-black uppercase tracking-wider text-[10px]">
-                        <td colSpan={7} className="py-1.5 px-4">∇ {group.groupName}</td>
+                      <tr className="bg-[#fef08a] border-y border-yellow-300 text-gray-900 font-black uppercase tracking-wider text-xs">
+                        <td colSpan={7} className="py-2 px-4">∇ {group.groupName}</td>
                       </tr>
                       {group.items.map((itemName, iIdx) => {
                         
@@ -379,13 +384,13 @@ export default function ZonesMatrixDashboard() {
 
                         return (
                           <tr key={iIdx} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                            <td className="py-2.5 px-4 font-bold text-gray-900">{itemName}</td>
+                            <td className="py-2 px-4 font-bold text-gray-900">{itemName}</td>
                             {weeklyCounts.map((count, wIdx) => (
-                              <td key={wIdx} className="py-2.5 px-2 text-center font-mono font-bold">
+                              <td key={wIdx} className="py-2 px-2 text-center font-mono font-black text-base">
                                 {count > 0 ? <span className="text-gray-900">{count}</span> : <span className="text-gray-300">0</span>}
                               </td>
                             ))}
-                            <td className="py-2.5 px-3 text-center font-black bg-[#fefce8] text-gray-900">{avg}</td>
+                            <td className="py-2 px-3 text-center font-black bg-[#fefce8] text-gray-900 text-base">{avg}</td>
                           </tr>
                         );
                       })}
@@ -395,29 +400,25 @@ export default function ZonesMatrixDashboard() {
               </table>
             </div>
             
-            <div className={`${theme.bgPrimary} text-white p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center shadow-md border-b-4 ${theme.borderPrimary} gap-4 transition-colors`}>
+            <div className={`${theme.bgPrimary} text-white p-5 rounded-xl flex flex-col sm:flex-row justify-between items-center shadow-md border-b-4 ${theme.borderPrimary} gap-4 transition-colors`}>
               <div>
-                <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Strategic Goal</span>
-                <span className="text-lg font-black tracking-wider">VISION 100% TARGET</span>
+                <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Strategic Goal</span>
+                <span className="text-xl font-black tracking-wider">VISION 100% TARGET</span>
               </div>
               <div className="flex items-center gap-6">
                 
-                {/* Editable Vision Target */}
                 <div className="text-right flex flex-col items-end">
-                  <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block mb-1`}>Target (Edit)</span>
-                  <input 
-                    type="number"
-                    defaultValue={visionTarget}
-                    key={`target-${selectedYear}-${selectedMonth}-${activeServiceType}-${visionTarget}`} 
-                    onBlur={(e) => handleTargetUpdate(parseInt(e.target.value) || 0)}
-                    className={`w-24 bg-black/20 border border-black/10 rounded px-2 py-0.5 text-xl font-black text-[#facc15] font-mono text-right outline-none focus:bg-black/40 transition-all ${theme.ring}`}
+                  <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block mb-1`}>Target (Edit)</span>
+                  <EditableNumberField 
+                    initialValue={visionTarget} 
+                    onSave={handleTargetUpdate} 
+                    className={`w-28 bg-black/20 border-2 border-black/30 rounded-lg px-3 py-1 text-2xl font-black text-[#facc15] font-mono text-right outline-none focus:bg-black/40 transition-all ${theme.ring}`}
                   />
                 </div>
 
-                {/* Auto-calculated Milestone Status */}
-                <div className={`${theme.bgSecondary} px-4 py-2 rounded-xl border ${theme.borderSecondary} text-right`}>
-                  <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Milestone Status</span>
-                  <span className={`text-lg font-black ${theme.textHighlight} font-mono`}>{milestonePercentage}%</span>
+                <div className={`${theme.bgSecondary} px-5 py-3 rounded-xl border ${theme.borderSecondary} text-right`}>
+                  <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Milestone Status</span>
+                  <span className={`text-2xl font-black ${theme.textHighlight} font-mono`}>{milestonePercentage}%</span>
                 </div>
               </div>
             </div>
