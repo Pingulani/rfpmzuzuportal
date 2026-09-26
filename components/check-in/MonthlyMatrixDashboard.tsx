@@ -26,8 +26,8 @@ export default function ZonesMatrixDashboard() {
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [visionTarget, setVisionTarget] = useState<number>(350);
 
-  // Dynamic Theme Config: Green for Sunday, Dark Reddish-Brown for Midweek
   const theme = activeServiceType === 'Sunday Service' 
     ? {
         bgPrimary: 'bg-[#034a36]',
@@ -43,7 +43,7 @@ export default function ZonesMatrixDashboard() {
         hover: 'hover:bg-[#023325]'
       }
     : {
-        bgPrimary: 'bg-[#4a1c15]', // Rich Dark Reddish-Brown
+        bgPrimary: 'bg-[#4a1c15]',
         bgSecondary: 'bg-[#31100a]', 
         borderPrimary: 'border-red-500',
         borderSecondary: 'border-red-600',
@@ -62,6 +62,19 @@ export default function ZonesMatrixDashboard() {
     try {
       const data = await getMonthlyZoneReport(selectedYear, selectedMonth, activeServiceType);
       setReportData(data);
+
+      // Fetch the Vision 100 target for this specific month/type
+      const { data: targetData } = await supabase
+        .from('monthly_targets')
+        .select('target_value')
+        .eq('year', selectedYear)
+        .eq('month', selectedMonth)
+        .eq('service_type', activeServiceType)
+        .single();
+      
+      if (targetData) setVisionTarget(targetData.target_value);
+      else setVisionTarget(350); // Default if none set yet
+
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to load matrix data.');
     } finally {
@@ -84,7 +97,6 @@ export default function ZonesMatrixDashboard() {
 
   const handleServiceFieldUpdate = async (serviceId: string, field: 'manual_headcount' | 'souls_won', value: number) => {
     if (!serviceId) return;
-
     try {
       const { error } = await supabase
         .from('services')
@@ -96,6 +108,30 @@ export default function ZonesMatrixDashboard() {
     } catch (err: any) {
       console.error('Error updating service field:', err);
       alert('Failed to save changes: ' + err.message);
+    }
+  };
+
+  const handleTargetUpdate = async (val: number) => {
+    if (val === visionTarget) return;
+    setVisionTarget(val); 
+
+    try {
+      const { error } = await supabase
+        .from('monthly_targets')
+        .upsert(
+          { 
+            year: selectedYear, 
+            month: selectedMonth, 
+            service_type: activeServiceType, 
+            target_value: val 
+          },
+          { onConflict: 'year,month,service_type' } // Uses the UNIQUE constraint we created
+        );
+
+      if (error) throw error;
+    } catch (err: any) {
+      console.error('Error saving target:', err);
+      alert('Failed to save Vision Target: ' + err.message);
     }
   };
 
@@ -168,9 +204,13 @@ export default function ZonesMatrixDashboard() {
     };
   });
 
-  const totalMonthlyAttendance = weeklyCardStats.reduce((acc, curr) => acc + curr.registered, 0);
+  // Calculate Average from HEADCOUNT as requested
+  const totalMonthlyHeadcount = weeklyCardStats.reduce((acc, curr) => acc + curr.headcount, 0);
   const activeWeeksCount = services.length > 0 ? new Set(services.map((s: any) => s.week_number)).size : 1;
-  const averageAttendance = Math.round(totalMonthlyAttendance / (activeWeeksCount || 1));
+  const averageAttendance = Math.round(totalMonthlyHeadcount / (activeWeeksCount || 1));
+
+  // Auto-calculate Milestone Status %
+  const milestonePercentage = visionTarget > 0 ? ((averageAttendance / visionTarget) * 100).toFixed(1) : '0.0';
 
   return (
     <div className="w-full max-w-[1450px] flex flex-col gap-4 mx-auto text-gray-900 p-2 md:p-4">
@@ -296,7 +336,7 @@ export default function ZonesMatrixDashboard() {
             <div className={`${theme.bgPrimary} text-white p-4 rounded-xl shadow-md border-b-4 ${theme.borderPrimary} transition-colors`}>
               <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Monthly Performance</span>
               <div className="flex justify-between items-end mt-1">
-                <span className="text-xs font-bold uppercase tracking-wider">Average Attendance</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Average Headcount</span>
                 <span className="text-2xl font-black text-[#facc15] font-mono">{averageAttendance}</span>
               </div>
             </div>
@@ -361,13 +401,23 @@ export default function ZonesMatrixDashboard() {
                 <span className="text-lg font-black tracking-wider">VISION 100% TARGET</span>
               </div>
               <div className="flex items-center gap-6">
-                <div className="text-right">
-                  <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Target</span>
-                  <span className="text-xl font-black text-[#facc15] font-mono">350</span>
+                
+                {/* Editable Vision Target */}
+                <div className="text-right flex flex-col items-end">
+                  <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block mb-1`}>Target (Edit)</span>
+                  <input 
+                    type="number"
+                    defaultValue={visionTarget}
+                    key={`target-${selectedYear}-${selectedMonth}-${activeServiceType}-${visionTarget}`} 
+                    onBlur={(e) => handleTargetUpdate(parseInt(e.target.value) || 0)}
+                    className={`w-24 bg-black/20 border border-black/10 rounded px-2 py-0.5 text-xl font-black text-[#facc15] font-mono text-right outline-none focus:bg-black/40 transition-all ${theme.ring}`}
+                  />
                 </div>
+
+                {/* Auto-calculated Milestone Status */}
                 <div className={`${theme.bgSecondary} px-4 py-2 rounded-xl border ${theme.borderSecondary} text-right`}>
                   <span className={`text-[10px] font-bold ${theme.textAccent} uppercase tracking-widest block`}>Milestone Status</span>
-                  <span className={`text-lg font-black ${theme.textHighlight} font-mono`}>50.6%</span>
+                  <span className={`text-lg font-black ${theme.textHighlight} font-mono`}>{milestonePercentage}%</span>
                 </div>
               </div>
             </div>
