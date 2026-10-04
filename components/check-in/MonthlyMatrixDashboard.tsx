@@ -190,10 +190,28 @@ export default function ZonesMatrixDashboard() {
   const isItemMatch = (member: any, targetItem: string) => {
     const val = getMemberCategory(member).toLowerCase();
     const target = targetItem.toLowerCase();
+    
     if (target === "unknown zone or not in a zone") {
-      const allKnown = ["zone 1", "zone 2", "zone 3", "zone 4", "mca", "mzuzu technical", "mit", "mzuni", "unilia", "mij", "other branches", "special services", "new members"];
-      return !val || !allKnown.includes(val);
+      const allKnown = [
+        "zone 1", "zone 2", "zone 3", "zone 4", "mca", "mzuzu technical", 
+        "mit", "mzuni", "unilia", "mij", "other branches", "special services", "new members"
+      ];
+      
+      const isUnknown = !val || !allKnown.includes(val);
+      
+      // Diagnostic Log: This will print the exact reason they are failing to your browser console
+      if (isUnknown) {
+         console.log(`⚠️ UNKNOWN CAUGHT -> Profile Data:`, member, `| Evaluated Text: "${val}"`);
+      }
+      
+      return isUnknown;
     }
+    
+    // Forgiving matches for singular vs plural data entry changes
+    if (target === "new members" && val.includes("new member")) return true;
+    if (target === "special services" && val.includes("special service")) return true;
+    if (target === "other branches" && val.includes("other branch")) return true;
+
     return val === target;
   };
 
