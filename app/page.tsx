@@ -1,13 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { supabase } from '../utils/supabase';
 import MonthlyMatrixDashboard from '../components/check-in/MonthlyMatrixDashboard';
 import TeamsMatrixDashboard from '../components/check-in/TeamsMatrixDashboard';
 import EditMemberModal from '../components/check-in/EditMemberModal';
 import NewcomerModal from '../components/check-in/NewcomerModal';
 import AddMemberModal from '../components/check-in/AddMemberModal';
-import { Search, Edit3, Trash2, UserPlus, UserCheck, Calendar, CheckCircle2, XCircle, Check } from 'lucide-react';
+import {
+  Search,
+  Edit3,
+  Trash2,
+  UserPlus,
+  UserCheck,
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  Check,
+  LayoutDashboard,
+  Network,
+  UsersRound,
+  FolderKanban,
+  Bell,
+  ChevronDown,
+  Menu,
+  X,
+} from 'lucide-react';
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
@@ -33,6 +52,7 @@ function getValidServiceDates(year: number, month: number, targetDayOfWeek: numb
 export default function PortalDashboard() {
   const [activeTab, setActiveTab] = useState<'zones' | 'teams' | 'checkin' | 'members'>('checkin');
   const [members, setMembers] = useState<any[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const [checkinMonth, setCheckinMonth] = useState(9);
   const [checkinYear, setCheckinYear] = useState(2026);
@@ -229,84 +249,218 @@ export default function PortalDashboard() {
     m.raw_category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.team?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const activeMembers = members.filter(
+    member => String(member.status || '').trim().toLowerCase() === 'active'
+  );
+  const activeTeamCounts = new Map<string, { name: string; memberCount: number }>();
+  activeMembers.forEach(member => {
+    const memberTeams = new Set(
+      String(member.team || '')
+        .split(',')
+        .map((team: string) => team.trim())
+        .filter((team: string) => team && !['n/a', 'none', 'unknown', 'unknown team or not in a team', 'not in a team'].includes(team.toLowerCase()))
+    );
+    memberTeams.forEach(team => {
+      const key = team.toLowerCase();
+      const current = activeTeamCounts.get(key);
+      activeTeamCounts.set(key, { name: current?.name || team, memberCount: (current?.memberCount || 0) + 1 });
+    });
+  });
+  const activeTeams = Array.from(activeTeamCounts.values())
+    .sort((a, b) => b.memberCount - a.memberCount || a.name.localeCompare(b.name));
+  const chartTeams = activeTeams.slice(0, 6);
+  const maxTeamMemberCount = chartTeams[0]?.memberCount || 1;
 
   return (
-    <main className="min-h-screen bg-gray-100 p-4 md:p-8 flex flex-col items-center relative">
-      
-      {/* Non-Blocking Toast Notification Banner */}
+    <div className="min-h-screen bg-[#f4f7fb] text-slate-900">
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 animate-bounce text-xs font-black uppercase tracking-wider border border-emerald-700">
-          <Check className="w-4 h-4 text-emerald-400" />
+        <div className="fixed bottom-6 right-6 z-[70] bg-emerald-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-emerald-700">
+          <Check className="w-4 h-4 text-emerald-300" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Top Navigation & Action Bar */}
-      <div className="w-full max-w-6xl flex flex-col md:flex-row gap-4 mb-6 justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="bg-emerald-900 text-white p-2.5 rounded-xl font-black text-sm tracking-wider">
-            RFPMZUZU
+      {mobileMenuOpen && (
+        <button
+          aria-label="Close navigation"
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden"
+        />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[250px] bg-[#1d2538] text-slate-100 transition-transform duration-200 lg:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="h-[86px] px-6 flex items-center border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/rfp-gold-logo.png"
+              alt="Raised For A Purpose Ministries logo"
+              width={48}
+              height={48}
+              priority
+              className="w-12 h-12 rounded-full object-contain"
+            />
+            <div>
+              <p className="text-[10px] font-black tracking-[0.06em] leading-tight">RAISED FOR A PURPOSE</p>
+              <p className="text-[10px] text-slate-400 font-bold tracking-[0.16em] mt-1">MZUZU BRANCH</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-black text-gray-900 uppercase">Mzuzu Branch Portal</h1>
-            <p className="text-xs text-gray-500 font-semibold">Executive Attendance & Management System</p>
-          </div>
+          <button aria-label="Close menu" onClick={() => setMobileMenuOpen(false)} className="ml-auto lg:hidden p-1 text-slate-300">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setIsNewcomerOpen(true)}
-            className="px-3 py-2 bg-amber-600 text-white text-xs font-black uppercase rounded-lg shadow-sm hover:bg-amber-700 transition-all flex items-center gap-1.5"
-          >
-            <UserPlus className="w-3.5 h-3.5" /> Newcomer Check-in
-          </button>
-          <button
-            onClick={() => setIsAddMemberOpen(true)}
-            className="px-3 py-2 bg-blue-900 text-white text-xs font-black uppercase rounded-lg shadow-sm hover:bg-blue-800 transition-all flex items-center gap-1.5"
-          >
-            <UserCheck className="w-3.5 h-3.5" /> Add Member
-          </button>
-        </div>
+        <nav className="p-4 space-y-1.5">
+          {[
+            { id: 'checkin' as const, label: 'Dashboard', icon: LayoutDashboard },
+            { id: 'members' as const, label: 'Member Management', icon: UsersRound },
+            { id: 'zones' as const, label: 'Zones Matrix', icon: Network },
+            { id: 'teams' as const, label: 'Teams Matrix', icon: FolderKanban },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => {
+                setActiveTab(id);
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full px-3 py-3 rounded-lg flex items-center gap-3 text-sm font-semibold transition-colors ${
+                activeTab === id
+                  ? 'bg-[#2d68aa] text-white shadow-lg shadow-slate-950/20'
+                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <Icon className="w-[18px] h-[18px]" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
 
-        <div className="flex gap-1.5 flex-wrap">
-          <button
-            onClick={() => setActiveTab('checkin')}
-            className={`px-3 py-2 text-xs font-black uppercase rounded-lg transition-all ${
-              activeTab === 'checkin' ? 'bg-emerald-900 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Service Check-in
-          </button>
-          <button
-            onClick={() => setActiveTab('zones')}
-            className={`px-3 py-2 text-xs font-black uppercase rounded-lg transition-all ${
-              activeTab === 'zones' ? 'bg-emerald-900 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Zones Matrix
-          </button>
-          <button
-            onClick={() => setActiveTab('teams')}
-            className={`px-3 py-2 text-xs font-black uppercase rounded-lg transition-all ${
-              activeTab === 'teams' ? 'bg-emerald-900 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Teams Matrix
-          </button>
-          <button
-            onClick={() => setActiveTab('members')}
-            className={`px-3 py-2 text-xs font-black uppercase rounded-lg transition-all ${
-              activeTab === 'members' ? 'bg-emerald-900 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Directory
-          </button>
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+          <div className="flex items-center gap-3 px-2">
+            <div className="w-9 h-9 rounded-full bg-[#d4b35e] text-[#1d2538] flex items-center justify-center font-black text-xs">AD</div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold truncate">Administrator</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Mzuzu Branch</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </aside>
+
+      <main className="lg:pl-[250px] min-h-screen">
+        <header className="h-[86px] bg-white border-b border-slate-200 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button aria-label="Open menu" onClick={() => setMobileMenuOpen(true)} className="lg:hidden p-2 rounded-lg border border-slate-200">
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <p className="hidden sm:block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Mzuzu Branch Portal</p>
+              <h1 className="text-base md:text-xl font-black text-slate-800 mt-0.5">
+                {activeTab === 'checkin' ? 'Dashboard' : activeTab === 'members' ? 'Member Management' : `${activeTab === 'zones' ? 'Zones' : 'Teams'} Matrix`}
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 md:gap-3">
+            <button aria-label="Notifications" className="relative hidden sm:flex w-10 h-10 rounded-full border border-slate-200 items-center justify-center text-slate-500 hover:bg-slate-50">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
+            </button>
+            <button
+              onClick={() => setIsAddMemberOpen(true)}
+              aria-label="Add member"
+              className="flex px-2.5 sm:px-4 py-2.5 bg-[#1d5f94] text-white text-xs font-bold rounded-lg hover:bg-[#164e7c] transition-colors items-center gap-2"
+            >
+              <UserCheck className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Add Member</span>
+            </button>
+            <button
+              onClick={() => setIsNewcomerOpen(true)}
+              aria-label="Newcomer check-in"
+              className="flex px-2.5 md:px-4 py-2.5 bg-[#d4a72c] text-white text-xs font-bold rounded-lg hover:bg-[#bd9424] transition-colors items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4 shrink-0" /> <span className="hidden md:inline">Newcomer</span>
+            </button>
+            <div className="hidden xl:flex items-center gap-2 pl-2 border-l border-slate-200">
+              <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-black text-xs">AD</div>
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            </div>
+          </div>
+        </header>
+
+        <div className="p-4 md:p-6 lg:p-8">
 
       {/* 1. SERVICE CHECK-IN TAB */}
       {activeTab === 'checkin' && (
-        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+        <div className="w-full max-w-6xl space-y-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Active Members</p>
+                <p className="text-2xl font-black text-slate-800 mt-1">{loadingMembers ? '—' : activeMembers.length}</p>
+              </div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-blue-50 text-[#2d68aa] flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Active Teams</p>
+                <p className="text-2xl font-black text-slate-800 mt-1">{loadingMembers ? '—' : activeTeams.length}</p>
+              </div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center"><FolderKanban className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Checked In</p>
+                <p className="text-2xl font-black text-emerald-700 mt-1">{serviceAttendance.length}</p>
+              </div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center"><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">All Members</p>
+                <p className="text-2xl font-black text-slate-800 mt-1">{loadingMembers ? '—' : members.length}</p>
+              </div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+            </div>
+          </div>
+
+          <section aria-labelledby="team-chart-title" className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1 mb-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#2d68aa]">People &amp; teams</p>
+                <h2 id="team-chart-title" className="text-base md:text-lg font-black text-slate-800 mt-1">Active members by team</h2>
+              </div>
+              <p className="text-xs text-slate-500">{loadingMembers ? 'Loading teams…' : `${activeTeams.length} active ${activeTeams.length === 1 ? 'team' : 'teams'}`}</p>
+            </div>
+            {loadingMembers ? (
+              <p className="py-8 text-center text-sm text-slate-400">Loading member data…</p>
+            ) : chartTeams.length === 0 ? (
+              <p className="py-8 text-center text-sm text-slate-500">No active team assignments to chart yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {chartTeams.map(({ name, memberCount }) => (
+                  <div key={name} className="grid grid-cols-[minmax(5rem,8rem)_1fr_2.5rem] sm:grid-cols-[minmax(8rem,12rem)_1fr_3rem] items-center gap-3">
+                    <span className="text-xs font-semibold text-slate-600 truncate" title={name}>{name}</span>
+                    <div
+                      className="h-3 bg-slate-100 rounded-full overflow-hidden"
+                      role="progressbar"
+                      aria-label={`${name}: ${memberCount} active members`}
+                      aria-valuemin={0}
+                      aria-valuemax={maxTeamMemberCount}
+                      aria-valuenow={memberCount}
+                    >
+                      <div
+                        className="h-full bg-gradient-to-r from-[#2d68aa] to-[#56a3d8] rounded-full"
+                        style={{ width: `${(memberCount / maxTeamMemberCount) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-right text-xs font-black text-slate-700">{memberCount}</span>
+                  </div>
+                ))}
+                {activeTeams.length > chartTeams.length && (
+                  <p className="pt-1 text-[11px] text-slate-400">Showing the 6 teams with the most active members.</p>
+                )}
+              </div>
+            )}
+          </section>
+
+          <div className="w-full bg-white rounded-2xl shadow-xl border border-gray-200 p-4 md:p-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 pb-4 border-b border-gray-200">
             <div>
               <h2 className="text-xl font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
@@ -370,9 +524,9 @@ export default function PortalDashboard() {
             </div>
           </div>
 
-          <div className="mb-4 flex justify-between items-center">
+          <div className="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
             <h3 className="text-xs font-black text-gray-700 uppercase tracking-wider">Member Check-in List ({members.length} Total Loaded)</h3>
-            <div className="relative w-full md:w-72">
+            <div className="relative w-full sm:max-w-xs">
               <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
               <input 
                 type="text"
@@ -436,6 +590,7 @@ export default function PortalDashboard() {
               </table>
             </div>
           )}
+          </div>
         </div>
       )}
 
@@ -447,8 +602,8 @@ export default function PortalDashboard() {
 
       {/* 4. MEMBER DIRECTORY TAB */}
       {activeTab === 'members' && (
-        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-gray-200 p-4 md:p-6">
+          <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
             <div>
               <h2 className="text-xl font-black text-gray-900 uppercase tracking-wide">Complete Member Directory</h2>
               <p className="text-xs text-gray-500 font-semibold">Managing {members.length} total database records.</p>
@@ -548,7 +703,8 @@ export default function PortalDashboard() {
           showToast(`Member "${name}" added successfully!`);
         }}
       />
-
-    </main>
+        </div>
+      </main>
+    </div>
   );
 }

@@ -141,11 +141,11 @@ export default function TeamsMatrixDashboard() {
     <div className="w-full max-w-[1400px] flex flex-col gap-4 mx-auto text-gray-900 p-2 md:p-4">
       {/* Controls Bar */}
       <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={() => setActiveServiceType('Sunday Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#034a36] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Calendar className="w-4 h-4" /> Sunday Services</button>
           <button onClick={() => setActiveServiceType('Midweek Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#4a1c15] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Users className="w-4 h-4" /> Midweek Services</button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 rounded-lg outline-none">
             {MONTHS.map((m, idx) => (<option key={m} value={idx + 1}>{m}</option>))}
           </select>
@@ -166,7 +166,7 @@ export default function TeamsMatrixDashboard() {
       <div id="teams-matrix-export-container" className="bg-[#fefce8] p-4 md:p-6 rounded-2xl border border-yellow-200 shadow-xl font-sans">
         
         {/* Header Banner */}
-        <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex justify-between items-end border-b-4 ${theme.borderPrimary} mb-4 transition-colors`}>
+        <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 border-b-4 ${theme.borderPrimary} mb-4 transition-colors`}>
           <div>
             <span className={`text-xs font-black ${theme.textAccent} uppercase tracking-widest block mb-1`}>Branch Attendance Report</span>
             <h1 className="text-3xl font-black tracking-wider uppercase mb-0.5">MZUZU BRANCH</h1>
@@ -181,8 +181,8 @@ export default function TeamsMatrixDashboard() {
         </div>
 
         {/* Matrix Table Full Width */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-md">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto shadow-md">
+          <table className="w-full min-w-[900px] text-left border-collapse">
             <thead>
               <tr className={`${theme.bgPrimary} text-white text-sm transition-colors`}>
                 <th className="py-3 px-5 font-black tracking-wider uppercase w-[35%]">NAME</th>
