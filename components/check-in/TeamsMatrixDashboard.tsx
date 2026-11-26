@@ -56,8 +56,8 @@ export default function TeamsMatrixDashboard() {
         textMuted: 'text-emerald-200', textAccent: 'text-emerald-300', hover: 'hover:bg-[#023325]'
       }
     : {
-        bgPrimary: 'bg-[#4a1c15]', bgSecondary: 'bg-[#31100a]', borderPrimary: 'border-red-500',
-        textMuted: 'text-red-200', textAccent: 'text-red-300', hover: 'hover:bg-[#31100a]'
+        bgPrimary: 'bg-[#171812]', bgSecondary: 'bg-[#090a08]', borderPrimary: 'border-[#d4b35e]',
+        textMuted: 'text-[#fef3c7]', textAccent: 'text-[#facc15]', hover: 'hover:bg-[#090a08]'
       };
 
   const loadData = async () => {
@@ -143,7 +143,7 @@ export default function TeamsMatrixDashboard() {
       <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setActiveServiceType('Sunday Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#034a36] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Calendar className="w-4 h-4" /> Sunday Services</button>
-          <button onClick={() => setActiveServiceType('Midweek Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#4a1c15] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Users className="w-4 h-4" /> Midweek Services</button>
+          <button onClick={() => setActiveServiceType('Midweek Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#171812] text-[#facc15] shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Users className="w-4 h-4" /> Midweek Services</button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="p-2 text-sm font-black uppercase bg-gray-50 border border-gray-300 rounded-lg outline-none">

@@ -288,7 +288,7 @@ export default function PortalDashboard() {
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[250px] bg-[#1d2538] text-slate-100 transition-transform duration-200 lg:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[250px] bg-[#11130f] text-slate-100 transition-transform duration-200 lg:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-[86px] px-6 flex items-center border-b border-white/10">
           <div className="flex items-center gap-3">
             <Image
@@ -300,7 +300,7 @@ export default function PortalDashboard() {
               className="w-12 h-12 rounded-full object-contain"
             />
             <div>
-              <p className="text-[10px] font-black tracking-[0.06em] leading-tight">RAISED FOR A PURPOSE</p>
+              <p className="text-[10px] font-black tracking-[0.06em] leading-tight text-[#facc15]">RAISED FOR A PURPOSE</p>
               <p className="text-[10px] text-slate-400 font-bold tracking-[0.16em] mt-1">MZUZU BRANCH</p>
             </div>
           </div>
@@ -324,8 +324,8 @@ export default function PortalDashboard() {
               }}
               className={`w-full px-3 py-3 rounded-lg flex items-center gap-3 text-sm font-semibold transition-colors ${
                 activeTab === id
-                  ? 'bg-[#2d68aa] text-white shadow-lg shadow-slate-950/20'
-                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                  ? 'bg-[#034a36] text-white shadow-lg shadow-black/30'
+                  : 'text-slate-300 hover:bg-emerald-950/70 hover:text-[#facc15]'
               }`}
             >
               <Icon className="w-[18px] h-[18px]" />
@@ -336,7 +336,7 @@ export default function PortalDashboard() {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3 px-2">
-            <div className="w-9 h-9 rounded-full bg-[#d4b35e] text-[#1d2538] flex items-center justify-center font-black text-xs">AD</div>
+            <div className="w-9 h-9 rounded-full bg-[#d4b35e] text-[#11130f] flex items-center justify-center font-black text-xs">AD</div>
             <div className="min-w-0">
               <p className="text-xs font-bold truncate">Administrator</p>
               <p className="text-[10px] text-slate-400 mt-0.5">Mzuzu Branch</p>
@@ -353,7 +353,7 @@ export default function PortalDashboard() {
             </button>
             <div>
               <p className="hidden sm:block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Mzuzu Branch Portal</p>
-              <h1 className="text-base md:text-xl font-black text-slate-800 mt-0.5">
+              <h1 className="text-base md:text-xl font-black text-[#11130f] mt-0.5">
                 {activeTab === 'checkin' ? 'Dashboard' : activeTab === 'members' ? 'Member Management' : `${activeTab === 'zones' ? 'Zones' : 'Teams'} Matrix`}
               </h1>
             </div>
@@ -361,24 +361,24 @@ export default function PortalDashboard() {
           <div className="flex items-center gap-2 md:gap-3">
             <button aria-label="Notifications" className="relative hidden sm:flex w-10 h-10 rounded-full border border-slate-200 items-center justify-center text-slate-500 hover:bg-slate-50">
               <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-[#d4b35e] rounded-full border border-white" />
             </button>
             <button
               onClick={() => setIsAddMemberOpen(true)}
               aria-label="Add member"
-              className="flex px-2.5 sm:px-4 py-2.5 bg-[#1d5f94] text-white text-xs font-bold rounded-lg hover:bg-[#164e7c] transition-colors items-center gap-2"
+              className="flex px-2.5 sm:px-4 py-2.5 bg-[#034a36] text-white text-xs font-bold rounded-lg hover:bg-[#023325] transition-colors items-center gap-2"
             >
               <UserCheck className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Add Member</span>
             </button>
             <button
               onClick={() => setIsNewcomerOpen(true)}
               aria-label="Newcomer check-in"
-              className="flex px-2.5 md:px-4 py-2.5 bg-[#d4a72c] text-white text-xs font-bold rounded-lg hover:bg-[#bd9424] transition-colors items-center gap-2"
+              className="flex px-2.5 md:px-4 py-2.5 bg-[#d4b35e] text-[#11130f] text-xs font-bold rounded-lg hover:bg-[#facc15] transition-colors items-center gap-2"
             >
               <UserPlus className="w-4 h-4 shrink-0" /> <span className="hidden md:inline">Newcomer</span>
             </button>
             <div className="hidden xl:flex items-center gap-2 pl-2 border-l border-slate-200">
-              <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-black text-xs">AD</div>
+              <div className="w-9 h-9 rounded-full bg-[#fef3c7] flex items-center justify-center text-[#11130f] font-black text-xs">AD</div>
               <ChevronDown className="w-4 h-4 text-slate-400" />
             </div>
           </div>
@@ -395,14 +395,14 @@ export default function PortalDashboard() {
                 <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Active Members</p>
                 <p className="text-2xl font-black text-slate-800 mt-1">{loadingMembers ? '—' : activeMembers.length}</p>
               </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-blue-50 text-[#2d68aa] flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-emerald-50 text-[#034a36] flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
               <div>
                 <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Active Teams</p>
                 <p className="text-2xl font-black text-slate-800 mt-1">{loadingMembers ? '—' : activeTeams.length}</p>
               </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center"><FolderKanban className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-[#fef3c7] text-[#7a5410] flex items-center justify-center"><FolderKanban className="w-4 h-4 sm:w-5 sm:h-5" /></div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
               <div>
@@ -416,14 +416,14 @@ export default function PortalDashboard() {
                 <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">All Members</p>
                 <p className="text-2xl font-black text-slate-800 mt-1">{loadingMembers ? '—' : members.length}</p>
               </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-[#fef3c7] text-[#7a5410] flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
             </div>
           </div>
 
           <section aria-labelledby="team-chart-title" className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1 mb-5">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#2d68aa]">People &amp; teams</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#034a36]">People &amp; teams</p>
                 <h2 id="team-chart-title" className="text-base md:text-lg font-black text-slate-800 mt-1">Active members by team</h2>
               </div>
               <p className="text-xs text-slate-500">{loadingMembers ? 'Loading teams…' : `${activeTeams.length} active ${activeTeams.length === 1 ? 'team' : 'teams'}`}</p>
@@ -446,7 +446,7 @@ export default function PortalDashboard() {
                       aria-valuenow={memberCount}
                     >
                       <div
-                        className="h-full bg-gradient-to-r from-[#2d68aa] to-[#56a3d8] rounded-full"
+                        className="h-full bg-gradient-to-r from-[#034a36] to-[#d4b35e] rounded-full"
                         style={{ width: `${(memberCount / maxTeamMemberCount) * 100}%` }}
                       />
                     </div>
@@ -569,7 +569,7 @@ export default function PortalDashboard() {
                           <td className="py-3 px-4 font-bold text-gray-900">{m.full_name}</td>
                           <td className="py-3 px-4 text-gray-600">{m.phone || 'N/A'}</td>
                           <td className="py-3 px-4 font-semibold text-emerald-900">{m.raw_category}</td>
-                          <td className="py-3 px-4 font-semibold text-indigo-900">{m.team}</td>
+                          <td className="py-3 px-4 font-semibold text-emerald-900">{m.team}</td>
                           <td className="py-3 px-4 text-center">
                             <button
                               onClick={() => toggleAttendance(m.id)}
@@ -649,7 +649,7 @@ export default function PortalDashboard() {
                         <td className="py-3 px-4 font-bold text-gray-900">{m.full_name}</td>
                         <td className="py-3 px-4 text-gray-600">{m.phone || 'N/A'}</td>
                         <td className="py-3 px-4 font-semibold text-emerald-900">{m.raw_category}</td>
-                        <td className="py-3 px-4 font-semibold text-indigo-900">{m.team}</td>
+                        <td className="py-3 px-4 font-semibold text-emerald-900">{m.team}</td>
                         <td className="py-3 px-4 text-center flex items-center justify-center gap-2">
                           <button
                             onClick={() => setEditingMember(m)}

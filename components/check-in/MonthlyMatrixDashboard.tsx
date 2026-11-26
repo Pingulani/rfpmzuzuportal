@@ -67,17 +67,17 @@ export default function ZonesMatrixDashboard() {
         hover: 'hover:bg-[#023325]'
       }
     : {
-        bgPrimary: 'bg-[#4a1c15]',
-        bgSecondary: 'bg-[#31100a]', 
-        borderPrimary: 'border-red-500',
-        borderSecondary: 'border-red-600',
-        textMuted: 'text-red-200',
-        textAccent: 'text-red-300',
-        textHighlight: 'text-red-400',
-        textData: 'text-red-800',
-        badge: 'bg-red-400',
-        ring: 'focus:border-[#4a1c15]',
-        hover: 'hover:bg-[#31100a]'
+        bgPrimary: 'bg-[#171812]',
+        bgSecondary: 'bg-[#090a08]', 
+        borderPrimary: 'border-[#d4b35e]',
+        borderSecondary: 'border-[#b8862b]',
+        textMuted: 'text-[#fef3c7]',
+        textAccent: 'text-[#facc15]',
+        textHighlight: 'text-[#facc15]',
+        textData: 'text-[#7a5410]',
+        badge: 'bg-[#d4b35e]',
+        ring: 'focus:border-[#d4b35e]',
+        hover: 'hover:bg-[#090a08]'
       };
 
   const loadData = async () => {
@@ -262,7 +262,7 @@ export default function ZonesMatrixDashboard() {
           </button>
           <button 
             onClick={() => setActiveServiceType('Midweek Service')} 
-            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#4a1c15] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#171812] text-[#facc15] shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             <Users className="w-4 h-4" /> Midweek Services
           </button>

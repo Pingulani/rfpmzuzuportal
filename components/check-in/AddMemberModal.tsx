@@ -78,12 +78,12 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="bg-blue-900 px-6 py-4 flex justify-between items-center text-white">
+        <div className="bg-[#034a36] px-6 py-4 flex justify-between items-center text-white">
           <div>
             <h2 className="text-lg font-black uppercase tracking-wider">Add Branch Member</h2>
-            <p className="text-blue-200 text-xs font-semibold">Register a permanent member</p>
+            <p className="text-emerald-200 text-xs font-semibold">Register a permanent member</p>
           </div>
-          <button onClick={onClose} className="bg-blue-800/50 hover:bg-blue-800 p-1.5 rounded-lg transition-colors">
+          <button onClick={onClose} className="bg-emerald-950/50 hover:bg-emerald-950 p-1.5 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -102,7 +102,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
               required
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-900 focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-emerald-800 focus:outline-none"
             />
           </div>
 
@@ -113,7 +113,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
               required
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-900 focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-emerald-800 focus:outline-none"
             />
           </div>
 
@@ -123,7 +123,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-900 focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-emerald-800 focus:outline-none"
             />
           </div>
 
@@ -132,7 +132,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
             <select
               value={zone}
               onChange={(e) => setZone(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-900 focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-emerald-800 focus:outline-none"
             >
               {ZONES.map(z => <option key={z} value={z}>{z}</option>)}
             </select>
@@ -143,7 +143,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
             <select
               value={team}
               onChange={(e) => setTeam(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-900 focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-emerald-800 focus:outline-none"
             >
               {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -153,7 +153,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
             <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 text-xs font-bold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="px-5 py-2 text-xs font-black text-white bg-blue-900 rounded-lg hover:bg-blue-800 flex items-center gap-2">
+            <button type="submit" disabled={loading} className="px-5 py-2 text-xs font-black text-white bg-[#034a36] rounded-lg hover:bg-[#023325] flex items-center gap-2">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Member
             </button>
