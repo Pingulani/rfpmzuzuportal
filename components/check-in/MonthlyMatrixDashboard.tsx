@@ -54,30 +54,30 @@ export default function ZonesMatrixDashboard() {
 
   const theme = activeServiceType === 'Sunday Service' 
     ? {
-        bgPrimary: 'bg-[#034a36]',
-        bgSecondary: 'bg-[#023325]',
-        borderPrimary: 'border-emerald-500',
-        borderSecondary: 'border-emerald-600',
-        textMuted: 'text-emerald-200',
-        textAccent: 'text-emerald-300',
-        textHighlight: 'text-emerald-400',
-        textData: 'text-emerald-700',
-        badge: 'bg-emerald-400',
-        ring: 'focus:border-[#034a36]',
-        hover: 'hover:bg-[#023325]'
+      bgPrimary: 'bg-[#550E0C]',
+      bgSecondary: 'bg-black',
+      borderPrimary: 'border-[#550E0C]',
+      borderSecondary: 'border-black',
+      textMuted: 'text-white/70',
+      textAccent: 'text-white',
+      textHighlight: 'text-white',
+      textData: 'text-[#550E0C]',
+      badge: 'bg-white',
+      ring: 'focus:border-[#550E0C]',
+      hover: 'hover:bg-black'
       }
     : {
-        bgPrimary: 'bg-[#171812]',
-        bgSecondary: 'bg-[#090a08]', 
-        borderPrimary: 'border-[#d4b35e]',
-        borderSecondary: 'border-[#b8862b]',
-        textMuted: 'text-[#fef3c7]',
-        textAccent: 'text-[#facc15]',
-        textHighlight: 'text-[#facc15]',
-        textData: 'text-[#7a5410]',
-        badge: 'bg-[#d4b35e]',
-        ring: 'focus:border-[#d4b35e]',
-        hover: 'hover:bg-[#090a08]'
+      bgPrimary: 'bg-black',
+      bgSecondary: 'bg-[#550E0C]', 
+      borderPrimary: 'border-[#550E0C]',
+      borderSecondary: 'border-white/30',
+      textMuted: 'text-white/70',
+      textAccent: 'text-white',
+      textHighlight: 'text-white',
+      textData: 'text-[#550E0C]',
+      badge: 'bg-white',
+      ring: 'focus:border-[#550E0C]',
+      hover: 'hover:bg-[#550E0C]'
       };
 
   const loadData = async () => {
@@ -159,7 +159,7 @@ export default function ZonesMatrixDashboard() {
     const element = document.getElementById('zones-matrix-export-container');
     if (!element) return;
     try {
-      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#fefce8', useCORS: true });
+      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
       const link = document.createElement('a');
       link.download = `Mzuzu_Branch_Zones_Matrix_${MONTHS[selectedMonth - 1]}_${selectedYear}.png`;
       link.href = canvas.toDataURL('image/png');
@@ -256,13 +256,13 @@ export default function ZonesMatrixDashboard() {
         <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => setActiveServiceType('Sunday Service')} 
-            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#034a36] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#550E0C] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             <Calendar className="w-4 h-4" /> Sunday Services
           </button>
           <button 
             onClick={() => setActiveServiceType('Midweek Service')} 
-            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-[#171812] text-[#facc15] shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-black text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             <Users className="w-4 h-4" /> Midweek Services
           </button>
@@ -281,20 +281,20 @@ export default function ZonesMatrixDashboard() {
       </div>
 
       {errorMsg && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
+        <div className="bg-[#550E0C]/5 border border-[#550E0C]/20 text-[#550E0C] px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <p>{errorMsg}</p>
         </div>
       )}
 
       {/* Matrix Export Container */}
-      <div id="zones-matrix-export-container" className="bg-[#fefce8] p-4 md:p-6 rounded-2xl border border-yellow-200 shadow-xl font-sans">
+      <div id="zones-matrix-export-container" className="bg-white p-4 md:p-6 rounded-2xl border border-gray-200 shadow-xl font-sans">
         
         <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 border-b-4 ${theme.borderPrimary} mb-4 transition-colors`}>
           <div>
             <span className={`text-xs font-black ${theme.textAccent} uppercase tracking-widest block mb-1`}>Branch Attendance Report</span>
             <h1 className="text-3xl font-black tracking-wider uppercase mb-0.5">MZUZU BRANCH</h1>
-            <h2 className="text-[#facc15] text-sm font-black tracking-widest uppercase">
+            <h2 className="text-white/80 text-sm font-black tracking-widest uppercase">
               {MONTHS[selectedMonth - 1]} {selectedYear} — {activeServiceType.toUpperCase()} ZONES
             </h2>
           </div>
@@ -340,13 +340,13 @@ export default function ZonesMatrixDashboard() {
                         initialValue={wk.soulsWon} 
                         onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', val); }}
                         disabled={!hasService || savingServiceId === wk.firstServiceId}
-                        className={`w-full bg-transparent text-xl font-black text-red-600 outline-none ${theme.ring} disabled:opacity-50`}
+                        className={`w-full bg-transparent text-xl font-black text-[#550E0C] outline-none ${theme.ring} disabled:opacity-50`}
                       />
                     </div>
 
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
                       <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Var</span>
-                      <span className={`text-xl font-black ${wk.variance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <span className={`text-xl font-black ${wk.variance >= 0 ? 'text-[#550E0C]' : 'text-black'}`}>
                         {wk.variance > 0 ? `+${wk.variance}` : wk.variance}
                       </span>
                     </div>
@@ -360,7 +360,7 @@ export default function ZonesMatrixDashboard() {
               <span className={`text-xs font-bold ${theme.textAccent} uppercase tracking-widest block`}>Monthly Performance</span>
               <div className="flex justify-between items-end mt-1">
                 <span className="text-sm font-bold uppercase tracking-wider">Average Headcount</span>
-                <span className="text-3xl font-black text-[#facc15] font-mono">{averageAttendance}</span>
+                <span className="text-3xl font-black text-white font-mono">{averageAttendance}</span>
               </div>
             </div>
           </div>
@@ -374,13 +374,13 @@ export default function ZonesMatrixDashboard() {
                     {displayWeeks.map(wk => (
                       <th key={wk} className={`py-2.5 px-2 font-black tracking-wider text-center ${theme.textMuted} w-14`}>WK{wk}</th>
                     ))}
-                    <th className={`py-2.5 px-3 font-black tracking-wider text-center text-[#facc15] ${theme.bgSecondary} w-20`}>AVG</th>
+                    <th className={`py-2.5 px-3 font-black tracking-wider text-center text-white ${theme.bgSecondary} w-20`}>AVG</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {ZONE_GROUPS.map((group, gIdx) => (
                     <Fragment key={gIdx}>
-                      <tr className="bg-[#fef08a] border-y border-yellow-300 text-gray-900 font-black uppercase tracking-wider text-xs">
+                      <tr className="bg-[#550E0C] border-y border-[#550E0C] text-white font-black uppercase tracking-wider text-xs">
                         <td colSpan={7} className="py-2 px-4">∇ {group.groupName}</td>
                       </tr>
                       {group.items.map((itemName, iIdx) => {
@@ -408,7 +408,7 @@ export default function ZonesMatrixDashboard() {
                                 {count > 0 ? <span className="text-gray-900">{count}</span> : <span className="text-gray-300">0</span>}
                               </td>
                             ))}
-                            <td className="py-2 px-3 text-center font-black bg-[#fefce8] text-gray-900 text-base">{avg}</td>
+                            <td className="py-2 px-3 text-center font-black bg-gray-50 text-[#550E0C] text-base">{avg}</td>
                           </tr>
                         );
                       })}
@@ -430,7 +430,7 @@ export default function ZonesMatrixDashboard() {
                   <EditableNumberField 
                     initialValue={visionTarget} 
                     onSave={handleTargetUpdate} 
-                    className={`w-28 bg-black/20 border-2 border-black/30 rounded-lg px-3 py-1 text-2xl font-black text-[#facc15] font-mono text-right outline-none focus:bg-black/40 transition-all ${theme.ring}`}
+                    className={`w-28 bg-black/20 border-2 border-white/30 rounded-lg px-3 py-1 text-2xl font-black text-white font-mono text-right outline-none focus:bg-black/40 transition-all ${theme.ring}`}
                   />
                 </div>
 

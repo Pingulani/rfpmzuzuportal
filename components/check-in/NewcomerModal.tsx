@@ -156,7 +156,7 @@ export default function NewcomerModal({ isOpen, onClose, onSuccess, selectedServ
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 relative z-10">
             {error && (
-              <div className="bg-red-50 text-red-700 p-3 rounded text-xs font-bold border border-red-200 flex items-center gap-2">
+              <div className="bg-[#550E0C]/5 text-[#550E0C] p-3 rounded text-xs font-bold border border-[#550E0C]/20 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" /> {error}
               </div>
             )}

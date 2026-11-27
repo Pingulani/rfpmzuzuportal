@@ -8,6 +8,8 @@ import TeamsMatrixDashboard from '../components/check-in/TeamsMatrixDashboard';
 import EditMemberModal from '../components/check-in/EditMemberModal';
 import NewcomerModal from '../components/check-in/NewcomerModal';
 import AddMemberModal from '../components/check-in/AddMemberModal';
+import MemberAttendanceRegister from '../components/check-in/MemberAttendanceRegister';
+import DashboardActivityCharts from '../components/check-in/DashboardActivityCharts';
 import {
   Search,
   Edit3,
@@ -26,6 +28,7 @@ import {
   ChevronDown,
   Menu,
   X,
+  Eye,
 } from 'lucide-react';
 
 const MONTHS = [
@@ -33,6 +36,13 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
+
+interface RegisterMember {
+  id: string;
+  full_name: string;
+  team?: string;
+  raw_category?: string;
+}
 
 function getValidServiceDates(year: number, month: number, targetDayOfWeek: number) {
   const dates = [];
@@ -65,6 +75,8 @@ export default function PortalDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedRegisterMember, setSelectedRegisterMember] = useState<RegisterMember | null>(null);
+  const [rankingRefreshKey, setRankingRefreshKey] = useState(0);
   
   // Non-blocking toast state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -212,6 +224,7 @@ export default function PortalDashboard() {
 
       if (!error) {
         setServiceAttendance(prev => prev.filter(id => id !== memberId));
+        setRankingRefreshKey(key => key + 1);
       }
     } else {
       const { error } = await supabase
@@ -220,6 +233,7 @@ export default function PortalDashboard() {
 
       if (!error) {
         setServiceAttendance(prev => [...prev, memberId]);
+        setRankingRefreshKey(key => key + 1);
       }
     }
     setActionLoading(false);
@@ -272,10 +286,10 @@ export default function PortalDashboard() {
   const maxTeamMemberCount = chartTeams[0]?.memberCount || 1;
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] text-slate-900">
+    <div className="min-h-screen bg-white text-black">
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-[70] bg-emerald-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-emerald-700">
-          <Check className="w-4 h-4 text-emerald-300" />
+        <div className="fixed bottom-6 right-6 z-[70] bg-[#550E0C] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-[#550E0C]">
+          <Check className="w-4 h-4 text-white" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -284,11 +298,11 @@ export default function PortalDashboard() {
         <button
           aria-label="Close navigation"
           onClick={() => setMobileMenuOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[250px] bg-[#11130f] text-slate-100 transition-transform duration-200 lg:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[250px] bg-[#550E0C] text-white transition-transform duration-200 lg:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-[86px] px-6 flex items-center border-b border-white/10">
           <div className="flex items-center gap-3">
             <Image
@@ -300,11 +314,11 @@ export default function PortalDashboard() {
               className="w-12 h-12 rounded-full object-contain"
             />
             <div>
-              <p className="text-[10px] font-black tracking-[0.06em] leading-tight text-[#facc15]">RAISED FOR A PURPOSE</p>
-              <p className="text-[10px] text-slate-400 font-bold tracking-[0.16em] mt-1">MZUZU BRANCH</p>
+              <p className="text-[10px] font-black tracking-[0.06em] leading-tight text-white">RAISED FOR A PURPOSE</p>
+              <p className="text-[10px] text-white/65 font-bold tracking-[0.16em] mt-1">MZUZU BRANCH</p>
             </div>
           </div>
-          <button aria-label="Close menu" onClick={() => setMobileMenuOpen(false)} className="ml-auto lg:hidden p-1 text-slate-300">
+          <button aria-label="Close menu" onClick={() => setMobileMenuOpen(false)} className="ml-auto lg:hidden p-1 text-white/75">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -324,8 +338,8 @@ export default function PortalDashboard() {
               }}
               className={`w-full px-3 py-3 rounded-lg flex items-center gap-3 text-sm font-semibold transition-colors ${
                 activeTab === id
-                  ? 'bg-[#034a36] text-white shadow-lg shadow-black/30'
-                  : 'text-slate-300 hover:bg-emerald-950/70 hover:text-[#facc15]'
+                  ? 'bg-black text-white shadow-lg shadow-black/30'
+                  : 'text-white/80 hover:bg-black/20 hover:text-white'
               }`}
             >
               <Icon className="w-[18px] h-[18px]" />
@@ -336,50 +350,50 @@ export default function PortalDashboard() {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3 px-2">
-            <div className="w-9 h-9 rounded-full bg-[#d4b35e] text-[#11130f] flex items-center justify-center font-black text-xs">AD</div>
+            <div className="w-9 h-9 rounded-full bg-white text-[#550E0C] flex items-center justify-center font-black text-xs">AD</div>
             <div className="min-w-0">
               <p className="text-xs font-bold truncate">Administrator</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">Mzuzu Branch</p>
+              <p className="text-[10px] text-white/65 mt-0.5">Mzuzu Branch</p>
             </div>
           </div>
         </div>
       </aside>
 
       <main className="lg:pl-[250px] min-h-screen">
-        <header className="h-[86px] bg-white border-b border-slate-200 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30">
+        <header className="h-[86px] bg-white border-b border-[#550E0C]/15 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button aria-label="Open menu" onClick={() => setMobileMenuOpen(true)} className="lg:hidden p-2 rounded-lg border border-slate-200">
               <Menu className="w-5 h-5" />
             </button>
             <div>
-              <p className="hidden sm:block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Mzuzu Branch Portal</p>
-              <h1 className="text-base md:text-xl font-black text-[#11130f] mt-0.5">
+              <p className="hidden sm:block text-[11px] font-bold uppercase tracking-[0.16em] text-[#550E0C]/70">Mzuzu Branch Portal</p>
+              <h1 className="text-base md:text-xl font-black text-[#550E0C] mt-0.5">
                 {activeTab === 'checkin' ? 'Dashboard' : activeTab === 'members' ? 'Member Management' : `${activeTab === 'zones' ? 'Zones' : 'Teams'} Matrix`}
               </h1>
             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-3">
-            <button aria-label="Notifications" className="relative hidden sm:flex w-10 h-10 rounded-full border border-slate-200 items-center justify-center text-slate-500 hover:bg-slate-50">
+            <button aria-label="Notifications" className="relative hidden sm:flex w-10 h-10 rounded-full border border-[#550E0C]/20 items-center justify-center text-[#550E0C] hover:bg-[#550E0C]/5">
               <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#d4b35e] rounded-full border border-white" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-[#550E0C] rounded-full border border-white" />
             </button>
             <button
               onClick={() => setIsAddMemberOpen(true)}
               aria-label="Add member"
-              className="flex px-2.5 sm:px-4 py-2.5 bg-[#034a36] text-white text-xs font-bold rounded-lg hover:bg-[#023325] transition-colors items-center gap-2"
+              className="flex px-2.5 sm:px-4 py-2.5 bg-[#550E0C] text-white text-xs font-bold rounded-lg hover:bg-black transition-colors items-center gap-2"
             >
               <UserCheck className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Add Member</span>
             </button>
             <button
               onClick={() => setIsNewcomerOpen(true)}
               aria-label="Newcomer check-in"
-              className="flex px-2.5 md:px-4 py-2.5 bg-[#d4b35e] text-[#11130f] text-xs font-bold rounded-lg hover:bg-[#facc15] transition-colors items-center gap-2"
+              className="flex px-2.5 md:px-4 py-2.5 bg-black text-white text-xs font-bold rounded-lg hover:bg-[#550E0C] transition-colors items-center gap-2"
             >
               <UserPlus className="w-4 h-4 shrink-0" /> <span className="hidden md:inline">Newcomer</span>
             </button>
             <div className="hidden xl:flex items-center gap-2 pl-2 border-l border-slate-200">
-              <div className="w-9 h-9 rounded-full bg-[#fef3c7] flex items-center justify-center text-[#11130f] font-black text-xs">AD</div>
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <div className="w-9 h-9 rounded-full bg-[#550E0C]/10 flex items-center justify-center text-[#550E0C] font-black text-xs">AD</div>
+              <ChevronDown className="w-4 h-4 text-[#550E0C]" />
             </div>
           </div>
         </header>
@@ -390,40 +404,40 @@ export default function PortalDashboard() {
       {activeTab === 'checkin' && (
         <div className="w-full max-w-6xl space-y-5">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
+            <div className="bg-white rounded-xl border border-[#550E0C]/15 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
               <div>
                 <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Active Members</p>
                 <p className="text-2xl font-black text-slate-800 mt-1">{loadingMembers ? '—' : activeMembers.length}</p>
               </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-emerald-50 text-[#034a36] flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-[#550E0C]/5 text-[#550E0C] flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
               <div>
                 <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Active Teams</p>
                 <p className="text-2xl font-black text-slate-800 mt-1">{loadingMembers ? '—' : activeTeams.length}</p>
               </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-[#fef3c7] text-[#7a5410] flex items-center justify-center"><FolderKanban className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-black text-white flex items-center justify-center"><FolderKanban className="w-4 h-4 sm:w-5 sm:h-5" /></div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
               <div>
                 <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Checked In</p>
-                <p className="text-2xl font-black text-emerald-700 mt-1">{serviceAttendance.length}</p>
+                <p className="text-2xl font-black text-[#550E0C] mt-1">{serviceAttendance.length}</p>
               </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center"><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-[#550E0C]/5 text-[#550E0C] flex items-center justify-center"><CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /></div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
               <div>
                 <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">All Members</p>
                 <p className="text-2xl font-black text-slate-800 mt-1">{loadingMembers ? '—' : members.length}</p>
               </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-[#fef3c7] text-[#7a5410] flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-black text-white flex items-center justify-center"><UsersRound className="w-4 h-4 sm:w-5 sm:h-5" /></div>
             </div>
           </div>
 
           <section aria-labelledby="team-chart-title" className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1 mb-5">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#034a36]">People &amp; teams</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#550E0C]">People &amp; teams</p>
                 <h2 id="team-chart-title" className="text-base md:text-lg font-black text-slate-800 mt-1">Active members by team</h2>
               </div>
               <p className="text-xs text-slate-500">{loadingMembers ? 'Loading teams…' : `${activeTeams.length} active ${activeTeams.length === 1 ? 'team' : 'teams'}`}</p>
@@ -446,7 +460,7 @@ export default function PortalDashboard() {
                       aria-valuenow={memberCount}
                     >
                       <div
-                        className="h-full bg-gradient-to-r from-[#034a36] to-[#d4b35e] rounded-full"
+                        className="h-full bg-[#550E0C] rounded-full"
                         style={{ width: `${(memberCount / maxTeamMemberCount) * 100}%` }}
                       />
                     </div>
@@ -460,11 +474,13 @@ export default function PortalDashboard() {
             )}
           </section>
 
+          <DashboardActivityCharts key={rankingRefreshKey} />
+
           <div className="w-full bg-white rounded-2xl shadow-xl border border-gray-200 p-4 md:p-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 pb-4 border-b border-gray-200">
             <div>
               <h2 className="text-xl font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-emerald-800" /> Live Service Check-in
+                <Calendar className="w-5 h-5 text-[#550E0C]" /> Live Service Check-in
               </h2>
               <p className="text-xs text-gray-500 font-semibold mt-0.5">Select service type, month, and strict calendar Sunday/Wednesday date.</p>
             </div>
@@ -473,7 +489,7 @@ export default function PortalDashboard() {
               <select
                 value={checkinServiceType}
                 onChange={(e) => setCheckinServiceType(e.target.value as any)}
-                className="p-2.5 text-xs font-bold bg-gray-50 border border-gray-300 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none"
+                className="p-2.5 text-xs font-bold bg-gray-50 border border-gray-300 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-[#550E0C] focus:outline-none"
               >
                 <option value="Sunday Service">Sunday Service (Sundays)</option>
                 <option value="Midweek Service">Midweek Service (Wednesdays)</option>
@@ -482,7 +498,7 @@ export default function PortalDashboard() {
               <select
                 value={checkinMonth}
                 onChange={(e) => setCheckinMonth(Number(e.target.value))}
-                className="p-2.5 text-xs font-bold bg-gray-50 border border-gray-300 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none"
+                className="p-2.5 text-xs font-bold bg-gray-50 border border-gray-300 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-[#550E0C] focus:outline-none"
               >
                 {MONTHS.map((m, idx) => (<option key={m} value={idx + 1}>{m}</option>))}
               </select>
@@ -490,22 +506,22 @@ export default function PortalDashboard() {
               <select
                 value={checkinYear}
                 onChange={(e) => setCheckinYear(Number(e.target.value))}
-                className="p-2.5 text-xs font-bold bg-gray-50 border border-gray-300 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none"
+                className="p-2.5 text-xs font-bold bg-gray-50 border border-gray-300 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-[#550E0C] focus:outline-none"
               >
                 {YEARS.map(y => (<option key={y} value={y}>{y}</option>))}
               </select>
             </div>
           </div>
 
-          <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-emerald-50/60 p-4 rounded-xl border border-emerald-200">
+          <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-[#550E0C]/5 p-4 rounded-xl border border-[#550E0C]/20">
             <div className="w-full md:w-auto flex-1">
-              <label className="text-xs font-black text-emerald-900 uppercase tracking-wider block mb-1">
+              <label className="text-xs font-black text-[#550E0C] uppercase tracking-wider block mb-1">
                 Select Calendar Date ({checkinServiceType})
               </label>
               <select
                 value={selectedServiceId}
                 onChange={(e) => setSelectedServiceId(e.target.value)}
-                className="w-full p-2.5 text-xs font-bold bg-white border border-emerald-300 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-800 focus:outline-none"
+                className="w-full p-2.5 text-xs font-bold bg-white border border-[#550E0C]/30 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-[#550E0C] focus:outline-none"
               >
                 {activeServiceDates.length === 0 ? (
                   <option value="">No valid calendar dates found for this month</option>
@@ -519,8 +535,8 @@ export default function PortalDashboard() {
               </select>
             </div>
 
-            <div className="text-xs font-bold text-emerald-900 bg-white px-4 py-3 rounded-lg border border-emerald-200 shadow-sm text-center">
-              Checked In: <span className="font-black text-sm text-emerald-700">{serviceAttendance.length}</span> members
+            <div className="text-xs font-bold text-[#550E0C] bg-white px-4 py-3 rounded-lg border border-[#550E0C]/20 shadow-sm text-center">
+              Checked In: <span className="font-black text-sm text-[#550E0C]">{serviceAttendance.length}</span> members
             </div>
           </div>
 
@@ -533,7 +549,7 @@ export default function PortalDashboard() {
                 placeholder="Search member name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-800"
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#550E0C]"
               />
             </div>
           </div>
@@ -545,7 +561,7 @@ export default function PortalDashboard() {
           ) : (
             <div className="overflow-x-auto border border-gray-200 rounded-xl max-h-[55vh]">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-emerald-950 text-white text-xs uppercase font-black tracking-wider sticky top-0 z-10">
+                <thead className="bg-[#550E0C] text-white text-xs uppercase font-black tracking-wider sticky top-0 z-10">
                   <tr>
                     <th className="py-3 px-4">Full Name</th>
                     <th className="py-3 px-4">Phone</th>
@@ -565,17 +581,17 @@ export default function PortalDashboard() {
                     filteredMembers.map((m) => {
                       const isCheckedIn = serviceAttendance.includes(m.id);
                       return (
-                        <tr key={m.id} className={`transition-colors ${isCheckedIn ? 'bg-emerald-50/60' : 'hover:bg-gray-50'}`}>
+                        <tr key={m.id} className={`transition-colors ${isCheckedIn ? 'bg-[#550E0C]/5' : 'hover:bg-gray-50'}`}>
                           <td className="py-3 px-4 font-bold text-gray-900">{m.full_name}</td>
                           <td className="py-3 px-4 text-gray-600">{m.phone || 'N/A'}</td>
-                          <td className="py-3 px-4 font-semibold text-emerald-900">{m.raw_category}</td>
-                          <td className="py-3 px-4 font-semibold text-emerald-900">{m.team}</td>
+                          <td className="py-3 px-4 font-semibold text-[#550E0C]">{m.raw_category}</td>
+                          <td className="py-3 px-4 font-semibold text-[#550E0C]">{m.team}</td>
                           <td className="py-3 px-4 text-center">
                             <button
                               onClick={() => toggleAttendance(m.id)}
                               disabled={actionLoading || !selectedServiceId}
                               className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all inline-flex items-center gap-1.5 shadow-sm ${
-                                isCheckedIn ? 'bg-emerald-700 text-white hover:bg-emerald-800' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                isCheckedIn ? 'bg-[#550E0C] text-white hover:bg-black' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             >
                               {isCheckedIn ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
@@ -615,7 +631,7 @@ export default function PortalDashboard() {
                 placeholder="Search member name, zone, team..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-800"
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#550E0C]"
               />
             </div>
           </div>
@@ -627,7 +643,7 @@ export default function PortalDashboard() {
           ) : (
             <div className="overflow-x-auto border border-gray-200 rounded-xl max-h-[65vh]">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-emerald-950 text-white text-xs uppercase font-black tracking-wider sticky top-0 z-10">
+                <thead className="bg-[#550E0C] text-white text-xs uppercase font-black tracking-wider sticky top-0 z-10">
                   <tr>
                     <th className="py-3 px-4">Full Name</th>
                     <th className="py-3 px-4">Phone</th>
@@ -648,21 +664,29 @@ export default function PortalDashboard() {
                       <tr key={m.id} className="hover:bg-gray-50 transition-colors">
                         <td className="py-3 px-4 font-bold text-gray-900">{m.full_name}</td>
                         <td className="py-3 px-4 text-gray-600">{m.phone || 'N/A'}</td>
-                        <td className="py-3 px-4 font-semibold text-emerald-900">{m.raw_category}</td>
-                        <td className="py-3 px-4 font-semibold text-emerald-900">{m.team}</td>
-                        <td className="py-3 px-4 text-center flex items-center justify-center gap-2">
+                        <td className="py-3 px-4 font-semibold text-[#550E0C]">{m.raw_category}</td>
+                        <td className="py-3 px-4 font-semibold text-[#550E0C]">{m.team}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => setSelectedRegisterMember(m)}
+                            className="px-3 py-1.5 bg-[#550E0C]/5 text-[#550E0C] font-black rounded-lg hover:bg-[#550E0C]/10 transition-colors inline-flex items-center gap-1"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> View
+                          </button>
                           <button
                             onClick={() => setEditingMember(m)}
-                            className="px-3 py-1.5 bg-emerald-50 text-emerald-800 font-black rounded-lg hover:bg-emerald-100 transition-colors inline-flex items-center gap-1"
+                            className="px-3 py-1.5 bg-slate-100 text-black font-black rounded-lg hover:bg-slate-200 transition-colors inline-flex items-center gap-1"
                           >
                             <Edit3 className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
                             onClick={() => handleDeleteMember(m.id, m.full_name)}
-                            className="px-3 py-1.5 bg-red-50 text-red-700 font-black rounded-lg hover:bg-red-100 transition-colors inline-flex items-center gap-1"
+                            className="px-3 py-1.5 bg-black text-white font-black rounded-lg hover:bg-[#550E0C] transition-colors inline-flex items-center gap-1"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -681,6 +705,7 @@ export default function PortalDashboard() {
         onClose={() => setEditingMember(null)}
         onSuccess={() => {
           fetchMembers();
+          setRankingRefreshKey(key => key + 1);
           showToast("Member profile updated successfully!");
         }}
       />
@@ -690,6 +715,7 @@ export default function PortalDashboard() {
         onClose={() => setIsNewcomerOpen(false)}
         onSuccess={(name) => {
           fetchMembers();
+          setRankingRefreshKey(key => key + 1);
           showToast(`Newcomer "${name}" added and checked in!`);
         }}
         selectedServiceId={selectedServiceId}
@@ -700,8 +726,13 @@ export default function PortalDashboard() {
         onClose={() => setIsAddMemberOpen(false)}
         onSuccess={(name) => {
           fetchMembers();
+          setRankingRefreshKey(key => key + 1);
           showToast(`Member "${name}" added successfully!`);
         }}
+      />
+      <MemberAttendanceRegister
+        member={selectedRegisterMember}
+        onClose={() => setSelectedRegisterMember(null)}
       />
         </div>
       </main>
