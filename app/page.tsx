@@ -11,6 +11,7 @@ import AddMemberModal from '../components/check-in/AddMemberModal';
 import MemberAttendanceRegister from '../components/check-in/MemberAttendanceRegister';
 import DashboardActivityCharts from '../components/check-in/DashboardActivityCharts';
 import TeamsDirectory from '../components/check-in/TeamsDirectory';
+import LoginPage from '../components/auth/LoginPage';
 import {
   Search,
   Edit3,
@@ -32,6 +33,7 @@ import {
   Eye,
   Moon,
   Sun,
+  LogOut,
 } from 'lucide-react';
 
 const MONTHS = [
@@ -39,6 +41,8 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 const FIRST_REPORT_YEAR = 2024;
+const DEMO_AUTH_STORAGE_KEY = 'rfpm-demo-auth';
+const AUTH_CHANGE_EVENT = 'rfpm-auth-change';
 const YEARS = Array.from(
   { length: Math.max(1, new Date().getFullYear() + 4 - FIRST_REPORT_YEAR + 1) },
   (_, index) => FIRST_REPORT_YEAR + index
@@ -70,6 +74,23 @@ function getServerThemeSnapshot() {
   return false;
 }
 
+function subscribeToAuth(onChange: () => void) {
+  window.addEventListener(AUTH_CHANGE_EVENT, onChange);
+  window.addEventListener('storage', onChange);
+  return () => {
+    window.removeEventListener(AUTH_CHANGE_EVENT, onChange);
+    window.removeEventListener('storage', onChange);
+  };
+}
+
+function getAuthSnapshot() {
+  return window.sessionStorage.getItem(DEMO_AUTH_STORAGE_KEY) === 'authenticated';
+}
+
+function getServerAuthSnapshot() {
+  return false;
+}
+
 function getValidServiceDates(year: number, month: number, targetDayOfWeek: number) {
   const dates = [];
   const date = new Date(year, month - 1, 1);
@@ -97,6 +118,7 @@ export default function PortalDashboard() {
   const [members, setMembers] = useState<any[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDarkMode = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
+  const isAuthenticated = useSyncExternalStore(subscribeToAuth, getAuthSnapshot, getServerAuthSnapshot);
   
   const [checkinMonth, setCheckinMonth] = useState(() => new Date().getMonth() + 1);
   const [checkinYear, setCheckinYear] = useState(() => new Date().getFullYear());
@@ -133,6 +155,16 @@ export default function PortalDashboard() {
     document.documentElement.dataset.theme = nextDarkMode ? 'dark' : 'light';
     window.localStorage.setItem('rfpm-color-theme', nextDarkMode ? 'dark' : 'light');
     window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
+  };
+
+  const handleDemoLogin = () => {
+    window.sessionStorage.setItem(DEMO_AUTH_STORAGE_KEY, 'authenticated');
+    window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+  };
+
+  const handleLogout = () => {
+    window.sessionStorage.removeItem(DEMO_AUTH_STORAGE_KEY);
+    window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
   };
 
   const showToast = (msg: string) => {
@@ -249,18 +281,20 @@ export default function PortalDashboard() {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     fetchMembers();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     syncAndLoadServices();
-  }, [checkinMonth, checkinYear, checkinServiceType]);
+  }, [isAuthenticated, checkinMonth, checkinYear, checkinServiceType]);
 
   useEffect(() => {
-    if (selectedServiceId) {
+    if (isAuthenticated && selectedServiceId) {
       fetchServiceAttendance(selectedServiceId);
     }
-  }, [selectedServiceId]);
+  }, [isAuthenticated, selectedServiceId]);
 
   const toggleAttendance = async (memberId: string) => {
     if (!selectedServiceId || actionLoading) return;
@@ -340,6 +374,10 @@ export default function PortalDashboard() {
     .sort((a, b) => b.memberCount - a.memberCount || a.name.localeCompare(b.name));
   const chartTeams = activeTeams.slice(0, 6);
   const maxTeamMemberCount = chartTeams[0]?.memberCount || 1;
+
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={handleDemoLogin} />;
+  }
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -430,7 +468,7 @@ export default function PortalDashboard() {
           </button>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+        <div className="absolute bottom-0 left-0 right-0 space-y-3 border-t border-white/10 p-4">
           <div className="flex items-center gap-3 px-2">
             <div className="w-9 h-9 rounded-full bg-white text-[#3D0908] flex items-center justify-center font-black text-xs">AD</div>
             <div className="min-w-0">
@@ -438,6 +476,14 @@ export default function PortalDashboard() {
               <p className="text-[10px] text-white/65 mt-0.5">Mzuzu Branch</p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-white/75 transition-colors hover:bg-black/25 hover:text-white"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
         </div>
       </aside>
 
