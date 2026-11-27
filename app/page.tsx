@@ -38,7 +38,11 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
   "July", "August", "September", "October", "November", "December"
 ];
-const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
+const FIRST_REPORT_YEAR = 2024;
+const YEARS = Array.from(
+  { length: Math.max(1, new Date().getFullYear() + 4 - FIRST_REPORT_YEAR + 1) },
+  (_, index) => FIRST_REPORT_YEAR + index
+);
 
 interface RegisterMember {
   id: string;
@@ -81,15 +85,24 @@ function getValidServiceDates(year: number, month: number, targetDayOfWeek: numb
   return dates;
 }
 
+function getLocalDateString(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function PortalDashboard() {
   const [activeTab, setActiveTab] = useState<'zones' | 'teams' | 'teamDirectory' | 'checkin' | 'members'>('checkin');
   const [members, setMembers] = useState<any[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDarkMode = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
   
-  const [checkinMonth, setCheckinMonth] = useState(9);
-  const [checkinYear, setCheckinYear] = useState(2026);
-  const [checkinServiceType, setCheckinServiceType] = useState<'Sunday Service' | 'Midweek Service'>('Sunday Service');
+  const [checkinMonth, setCheckinMonth] = useState(() => new Date().getMonth() + 1);
+  const [checkinYear, setCheckinYear] = useState(() => new Date().getFullYear());
+  const [checkinServiceType, setCheckinServiceType] = useState<'Sunday Service' | 'Midweek Service'>(
+    () => new Date().getDay() === 3 ? 'Midweek Service' : 'Sunday Service'
+  );
   
   const [activeServiceDates, setActiveServiceDates] = useState<{ weekNum: number; dateStr: string; serviceId: string | null }[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
@@ -212,7 +225,11 @@ export default function PortalDashboard() {
 
     setActiveServiceDates(updatedDates);
     if (updatedDates.length > 0 && (!selectedServiceId || !updatedDates.some(d => d.serviceId === selectedServiceId))) {
-      setSelectedServiceId(updatedDates[0].serviceId || '');
+      const today = getLocalDateString(new Date());
+      const defaultDate = updatedDates.find(item => item.dateStr === today)
+        || [...updatedDates].reverse().find(item => item.dateStr <= today)
+        || updatedDates[0];
+      setSelectedServiceId(defaultDate.serviceId || '');
     }
   };
 
@@ -388,6 +405,31 @@ export default function PortalDashboard() {
           ))}
         </nav>
 
+        <div className="space-y-2 px-4 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              setIsAddMemberOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className="flex w-full items-center gap-3 rounded-lg border border-rfp-gold/45 bg-black/20 px-3 py-3 text-left text-sm font-bold text-white transition-colors hover:bg-black/40"
+          >
+            <UserCheck className="h-[18px] w-[18px] text-rfp-gold" />
+            <span>Add Member</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsNewcomerOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className="flex w-full items-center gap-3 rounded-lg border border-white/15 px-3 py-3 text-left text-sm font-semibold text-white/85 transition-colors hover:border-rfp-gold/45 hover:bg-black/20 hover:text-white"
+          >
+            <UserPlus className="h-[18px] w-[18px]" />
+            <span>Newcomer Check-in</span>
+          </button>
+        </div>
+
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3 px-2">
             <div className="w-9 h-9 rounded-full bg-white text-[#3D0908] flex items-center justify-center font-black text-xs">AD</div>
@@ -433,20 +475,6 @@ export default function PortalDashboard() {
             <button aria-label="Notifications" className="relative hidden sm:flex w-10 h-10 rounded-full border border-[#3D0908]/20 items-center justify-center text-[#3D0908] hover:bg-[#3D0908]/5">
               <Bell className="w-4 h-4" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-[#3D0908] rounded-full border border-white" />
-            </button>
-            <button
-              onClick={() => setIsAddMemberOpen(true)}
-              aria-label="Add member"
-              className="flex px-2.5 sm:px-4 py-2.5 bg-[#3D0908] text-white text-xs font-bold rounded-lg border border-rfp-gold/50 hover:bg-black transition-colors items-center gap-2"
-            >
-              <UserCheck className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">Add Member</span>
-            </button>
-            <button
-              onClick={() => setIsNewcomerOpen(true)}
-              aria-label="Newcomer check-in"
-              className="flex px-2.5 md:px-4 py-2.5 bg-black text-white text-xs font-bold rounded-lg hover:bg-[#3D0908] transition-colors items-center gap-2"
-            >
-              <UserPlus className="w-4 h-4 shrink-0" /> <span className="hidden md:inline">Newcomer</span>
             </button>
             <div className="hidden xl:flex items-center gap-2 pl-2 border-l border-slate-200">
               <div className="w-9 h-9 rounded-full bg-[#3D0908]/10 flex items-center justify-center text-[#3D0908] font-black text-xs">AD</div>

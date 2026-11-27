@@ -10,7 +10,11 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
   "July", "August", "September", "October", "November", "December"
 ];
-const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
+const FIRST_REPORT_YEAR = 2024;
+const YEARS = Array.from(
+  { length: Math.max(1, new Date().getFullYear() + 4 - FIRST_REPORT_YEAR + 1) },
+  (_, index) => FIRST_REPORT_YEAR + index
+);
 
 const ZONE_GROUPS = [
   { groupName: "ZONES", items: ["Zone 1", "Zone 2", "Zone 3", "Zone 4"] },
@@ -43,8 +47,8 @@ const EditableNumberField = ({ initialValue, onSave, disabled, className }: { in
 
 export default function ZonesMatrixDashboard() {
   const [activeServiceType, setActiveServiceType] = useState<'Sunday Service' | 'Midweek Service'>('Sunday Service');
-  const [selectedMonth, setSelectedMonth] = useState(9);
-  const [selectedYear, setSelectedYear] = useState(2026);
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
