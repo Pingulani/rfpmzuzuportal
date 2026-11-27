@@ -90,7 +90,7 @@ export async function getAttendanceRankings(): Promise<{
   return {
     members: Array.from(memberCheckIns.values())
       .sort((a, b) => b.checkIns - a.checkIns || a.name.localeCompare(b.name))
-      .slice(0, 20),
+      .slice(0, 100),
     teams: Array.from(teamCheckIns.values())
       .map(({ name, checkIns, members }) => ({ name, checkIns, activeMembers: members.size }))
       .sort((a, b) => b.checkIns - a.checkIns || a.name.localeCompare(b.name)),

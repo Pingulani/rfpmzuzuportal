@@ -88,7 +88,7 @@ export default function DashboardActivityCharts() {
       <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-6">
         <div className="mb-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#3D0908]">Member recognition</p>
-          <h2 className="mt-1 text-base font-black text-black md:text-lg">Top 20 most active members</h2>
+          <h2 className="mt-1 text-base font-black text-black md:text-lg">Top 100 most active members</h2>
           <p className="mt-1 text-xs text-slate-500">Active members ranked by total lifetime check-ins.</p>
         </div>
 
