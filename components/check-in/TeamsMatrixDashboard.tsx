@@ -5,41 +5,13 @@ import { supabase } from '../../utils/supabase';
 import { getMonthlyZoneReport } from '../../services/monthlyReportService';
 import { Calendar, Users, Download, AlertCircle } from 'lucide-react';
 import html2canvas from 'html2canvas-pro';
+import { TEAM_GROUPS } from './teamGroups';
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
   "July", "August", "September", "October", "November", "December"
 ];
 const YEARS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
-
-const TEAM_GROUPS = [
-  { 
-    groupName: "IN-SERVICE TEAMS", 
-    items: [
-      "Access Control", "Audio Streaming", "Catcher", "Information Desk", "Lyrics", 
-      "Musicians", "Photography", "Projection", "Royal Guard", "Runner", 
-      "Singer", "Sound Crew", "Stage Manager", "Traffic Patrol And Security", 
-      "Usher", "Video Streaming", "Videography"
-    ] 
-  },
-  { 
-    groupName: "BRANCH OPERATIONS TEAMS", 
-    items: [
-      "Archive", "Children's Church Teacher", "Church Store", "Decorator", 
-      "Graphic Design", "Pastor's Chauffer", "Pastor's Executive Secretary", 
-      "Prayer", "Public Speaker", "Sanctuary Keeper", "Script Writer", 
-      "Social Media", "Uniform", "Welfare"
-    ] 
-  },
-  { 
-    groupName: "BRANCH DIRECTORATE TEAMS", 
-    items: [
-      "Children's Music And Arts Ministry (MAM)", "Finance", "GLM Committee", 
-      "Monitoring And Evaluation", "Research And Conceptualisation", 
-      "Music And Arts Ministry (MAM)", "Training"
-    ] 
-  }
-];
 
 export default function TeamsMatrixDashboard() {
   const [activeServiceType, setActiveServiceType] = useState<'Sunday Service' | 'Midweek Service'>('Sunday Service');
@@ -52,12 +24,12 @@ export default function TeamsMatrixDashboard() {
 
   const theme = activeServiceType === 'Sunday Service' 
     ? {
-      bgPrimary: 'bg-[#550E0C]', bgSecondary: 'bg-black', borderPrimary: 'border-[#550E0C]',
+      bgPrimary: 'bg-[#3D0908]', bgSecondary: 'bg-black',
       textMuted: 'text-white/70', textAccent: 'text-white', hover: 'hover:bg-black'
       }
     : {
-      bgPrimary: 'bg-black', bgSecondary: 'bg-[#550E0C]', borderPrimary: 'border-[#550E0C]',
-      textMuted: 'text-white/70', textAccent: 'text-white', hover: 'hover:bg-[#550E0C]'
+      bgPrimary: 'bg-black', bgSecondary: 'bg-[#3D0908]',
+      textMuted: 'text-white/70', textAccent: 'text-white', hover: 'hover:bg-[#3D0908]'
       };
 
   const loadData = async () => {
@@ -142,7 +114,7 @@ export default function TeamsMatrixDashboard() {
       {/* Controls Bar */}
       <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200">
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => setActiveServiceType('Sunday Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#550E0C] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Calendar className="w-4 h-4" /> Sunday Services</button>
+          <button onClick={() => setActiveServiceType('Sunday Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#3D0908] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Calendar className="w-4 h-4" /> Sunday Services</button>
           <button onClick={() => setActiveServiceType('Midweek Service')} className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Midweek Service' ? 'bg-black text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Users className="w-4 h-4" /> Midweek Services</button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -157,7 +129,7 @@ export default function TeamsMatrixDashboard() {
       </div>
 
       {errorMsg && (
-        <div className="bg-[#550E0C]/5 border border-[#550E0C]/20 text-[#550E0C] px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
+        <div className="bg-[#3D0908]/5 border border-[#3D0908]/20 text-[#3D0908] px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
           <AlertCircle className="w-5 h-5 shrink-0" /><p>{errorMsg}</p>
         </div>
       )}
@@ -166,7 +138,7 @@ export default function TeamsMatrixDashboard() {
       <div id="teams-matrix-export-container" className="bg-white p-4 md:p-6 rounded-2xl border border-gray-200 shadow-xl font-sans">
         
         {/* Header Banner */}
-        <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 border-b-4 ${theme.borderPrimary} mb-4 transition-colors`}>
+        <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 border-b-4 border-rfp-gold mb-4 transition-colors`}>
           <div>
             <span className={`text-xs font-black ${theme.textAccent} uppercase tracking-widest block mb-1`}>Branch Attendance Report</span>
             <h1 className="text-3xl font-black tracking-wider uppercase mb-0.5">MZUZU BRANCH</h1>
@@ -191,13 +163,13 @@ export default function TeamsMatrixDashboard() {
                   <th key={wk} className={`py-3 px-3 font-black tracking-wider text-center ${theme.textMuted} w-16`}>WK{wk}</th>
                 ))}
                 <th className={`py-3 px-4 font-black tracking-wider text-center text-white ${theme.bgSecondary} w-20`}>AVE.</th>
-                <th className={`py-3 px-4 font-black tracking-wider text-center text-white bg-[#550E0C] w-24`}>AVE.%</th>
+                <th className={`py-3 px-4 font-black tracking-wider text-center text-white bg-[#3D0908] w-24`}>AVE.%</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
               {TEAM_GROUPS.map((group, gIdx) => (
                 <Fragment key={gIdx}>
-                  <tr className="bg-[#550E0C] border-y border-[#550E0C] text-white font-black uppercase tracking-wider text-xs">
+                  <tr className="bg-[#3D0908] border-y border-[#3D0908] text-white font-black uppercase tracking-wider text-xs">
                     <td colSpan={9} className="py-2.5 px-5 flex items-center gap-2">
                       <span className="bg-black text-white w-4 h-4 rounded-sm flex items-center justify-center text-[10px]">∇</span> 
                       {group.groupName}
@@ -248,10 +220,10 @@ export default function TeamsMatrixDashboard() {
                         ))}
 
                         {/* Averages */}
-                        <td className="py-2.5 px-4 text-center font-black bg-gray-50 text-[#550E0C] text-base">
+                        <td className="py-2.5 px-4 text-center font-black bg-gray-50 text-[#3D0908] text-base">
                           {avg}
                         </td>
-                        <td className="py-2.5 px-4 text-center font-black bg-[#550E0C] text-white text-base">
+                        <td className="py-2.5 px-4 text-center font-black bg-[#3D0908] text-white text-base">
                           {avgPercent}%
                         </td>
                       </tr>

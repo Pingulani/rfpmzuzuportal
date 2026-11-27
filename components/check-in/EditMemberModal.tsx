@@ -91,7 +91,7 @@ export default function EditMemberModal({ isOpen, onClose, onSuccess, member }: 
       <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col transform transition-all scale-100">
         
         {/* Header */}
-        <div className="bg-[#550E0C] px-6 py-4 flex justify-between items-center">
+        <div className="bg-[#3D0908] px-6 py-4 flex justify-between items-center">
           <div>
             <h2 className="text-lg font-black text-white uppercase tracking-wider">Edit Member Profile</h2>
             <p className="text-white/75 text-xs font-semibold mt-0.5">Update database records</p>
@@ -104,7 +104,7 @@ export default function EditMemberModal({ isOpen, onClose, onSuccess, member }: 
         {/* Form Body */}
         <form onSubmit={handleUpdate} className="p-6 flex flex-col gap-5">
           {error && (
-            <div className="bg-[#550E0C]/5 text-[#550E0C] p-3 rounded-lg text-sm font-semibold border border-[#550E0C]/20 flex items-center gap-2">
+            <div className="bg-[#3D0908]/5 text-[#3D0908] p-3 rounded-lg text-sm font-semibold border border-[#3D0908]/20 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" /> {error}
             </div>
           )}
@@ -113,39 +113,39 @@ export default function EditMemberModal({ isOpen, onClose, onSuccess, member }: 
             {/* Name Field */}
             <div>
               <label className="text-xs font-black text-gray-700 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                <User className="w-3.5 h-3.5 text-[#550E0C]" /> Full Name
+                <User className="w-3.5 h-3.5 text-[#3D0908]" /> Full Name
               </label>
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-2 focus:ring-[#550E0C] focus:outline-none transition-all font-medium"
+                className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-2 focus:ring-[#3D0908] focus:outline-none transition-all font-medium"
               />
             </div>
 
             {/* Phone Field */}
             <div>
               <label className="text-xs font-black text-gray-700 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                <Phone className="w-3.5 h-3.5 text-[#550E0C]" /> Phone Number
+                <Phone className="w-3.5 h-3.5 text-[#3D0908]" /> Phone Number
               </label>
               <input
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-2 focus:ring-[#550E0C] focus:outline-none transition-all font-medium"
+                className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-2 focus:ring-[#3D0908] focus:outline-none transition-all font-medium"
               />
             </div>
 
             {/* Zone Dropdown */}
             <div>
               <label className="text-xs font-black text-gray-700 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[#550E0C]" /> Assigned Zone
+                <MapPin className="w-3.5 h-3.5 text-[#3D0908]" /> Assigned Zone
               </label>
               <select
                 value={zone}
                 onChange={(e) => setZone(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-2 focus:ring-[#550E0C] focus:outline-none transition-all font-medium"
+                className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-2 focus:ring-[#3D0908] focus:outline-none transition-all font-medium"
               >
                 {ZONES.map(z => (
                   <option key={z} value={z}>{z}</option>
@@ -156,12 +156,12 @@ export default function EditMemberModal({ isOpen, onClose, onSuccess, member }: 
             {/* Team Dropdown */}
             <div>
               <label className="text-xs font-black text-gray-700 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                <Briefcase className="w-3.5 h-3.5 text-[#550E0C]" /> Ministry Team
+                <Briefcase className="w-3.5 h-3.5 text-[#3D0908]" /> Ministry Team
               </label>
               <select
                 value={team}
                 onChange={(e) => setTeam(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-2 focus:ring-[#550E0C] focus:outline-none transition-all font-medium"
+                className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-2 focus:ring-[#3D0908] focus:outline-none transition-all font-medium"
               >
                 {TEAMS.map(t => (
                   <option key={t} value={t}>{t}</option>
@@ -183,7 +183,7 @@ export default function EditMemberModal({ isOpen, onClose, onSuccess, member }: 
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 text-sm font-bold text-white bg-[#550E0C] rounded-lg hover:bg-black shadow-md transition-colors flex items-center gap-2 disabled:opacity-70"
+              className="px-5 py-2.5 text-sm font-bold text-white bg-[#3D0908] rounded-lg hover:bg-black shadow-md transition-colors flex items-center gap-2 disabled:opacity-70"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {loading ? 'Saving...' : 'Save Changes'}

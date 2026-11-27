@@ -25,7 +25,7 @@ export default function TeamBreakdown() {
   return (
     <div className="w-full max-w-lg bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-6">
       <div className="flex items-center space-x-3 mb-4">
-        <div className="h-8 w-8 bg-[#550E0C] text-white rounded-full flex items-center justify-center font-bold">👥</div>
+        <div className="h-8 w-8 bg-[#3D0908] text-white rounded-full flex items-center justify-center font-bold">👥</div>
         <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide">Team Turnout</h2>
       </div>
 
@@ -36,7 +36,7 @@ export default function TeamBreakdown() {
           {teams.map((item, idx) => (
             <div key={idx} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex justify-between items-center">
               <span className="text-xs font-bold text-gray-700 truncate mr-2" title={item.teamName}>{item.teamName}</span>
-              <span className="bg-[#550E0C] text-white text-xs font-black px-2.5 py-1 rounded-full">{item.count}</span>
+              <span className="bg-[#3D0908] text-white text-xs font-black px-2.5 py-1 rounded-full">{item.count}</span>
             </div>
           ))}
         </div>

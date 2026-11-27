@@ -33,6 +33,7 @@ const PAGE_SIZE = 1000;
 export async function getAttendanceRankings(): Promise<{
   members: MemberAttendanceRanking[];
   teams: TeamAttendanceRanking[];
+  memberCheckIns: Record<string, number>;
 }> {
   const memberCheckIns = new Map<string, MemberAttendanceRanking>();
   const teamCheckIns = new Map<string, { name: string; checkIns: number; members: Set<string> }>();
@@ -81,6 +82,11 @@ export async function getAttendanceRankings(): Promise<{
     page += 1;
   }
 
+  const memberCheckInCounts: Record<string, number> = {};
+  memberCheckIns.forEach((ranking, memberId) => {
+    memberCheckInCounts[memberId] = ranking.checkIns;
+  });
+
   return {
     members: Array.from(memberCheckIns.values())
       .sort((a, b) => b.checkIns - a.checkIns || a.name.localeCompare(b.name))
@@ -88,5 +94,6 @@ export async function getAttendanceRankings(): Promise<{
     teams: Array.from(teamCheckIns.values())
       .map(({ name, checkIns, members }) => ({ name, checkIns, activeMembers: members.size }))
       .sort((a, b) => b.checkIns - a.checkIns || a.name.localeCompare(b.name)),
+    memberCheckIns: memberCheckInCounts,
   };
 }

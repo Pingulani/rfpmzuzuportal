@@ -78,7 +78,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="bg-[#550E0C] px-6 py-4 flex justify-between items-center text-white">
+        <div className="bg-[#3D0908] px-6 py-4 flex justify-between items-center text-white">
           <div>
             <h2 className="text-lg font-black uppercase tracking-wider">Add Branch Member</h2>
             <p className="text-white/75 text-xs font-semibold">Register a permanent member</p>
@@ -90,7 +90,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
 
         <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
           {error && (
-            <div className="bg-[#550E0C]/5 text-[#550E0C] p-3 rounded-lg text-xs font-semibold border border-[#550E0C]/20 flex items-center gap-2">
+            <div className="bg-[#3D0908]/5 text-[#3D0908] p-3 rounded-lg text-xs font-semibold border border-[#3D0908]/20 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" /> {error}
             </div>
           )}
@@ -102,7 +102,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
               required
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#550E0C] focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#3D0908] focus:outline-none"
             />
           </div>
 
@@ -113,7 +113,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
               required
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#550E0C] focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#3D0908] focus:outline-none"
             />
           </div>
 
@@ -123,7 +123,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#550E0C] focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#3D0908] focus:outline-none"
             />
           </div>
 
@@ -132,7 +132,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
             <select
               value={zone}
               onChange={(e) => setZone(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#550E0C] focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#3D0908] focus:outline-none"
             >
               {ZONES.map(z => <option key={z} value={z}>{z}</option>)}
             </select>
@@ -143,7 +143,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
             <select
               value={team}
               onChange={(e) => setTeam(e.target.value)}
-              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#550E0C] focus:outline-none"
+              className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#3D0908] focus:outline-none"
             >
               {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -153,7 +153,7 @@ export default function AddMemberModal({ isOpen, onClose, onSuccess }: AddMember
             <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 text-xs font-bold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="px-5 py-2 text-xs font-black text-white bg-[#550E0C] rounded-lg hover:bg-black flex items-center gap-2">
+            <button type="submit" disabled={loading} className="px-5 py-2 text-xs font-black text-white bg-[#3D0908] rounded-lg hover:bg-black flex items-center gap-2">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Member
             </button>

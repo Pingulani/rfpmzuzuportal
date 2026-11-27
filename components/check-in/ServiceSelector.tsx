@@ -28,7 +28,7 @@ export default function ServiceSelector({ onServiceReady }: ServiceSelectorProps
         <select 
           value={serviceType} 
           onChange={(e) => setServiceType(e.target.value)}
-          className="p-2 text-sm font-semibold border rounded-lg bg-gray-50 text-black focus:outline-none focus:border-[#550E0C]"
+          className="p-2 text-sm font-semibold border rounded-lg bg-gray-50 text-black focus:outline-none focus:border-[#3D0908]"
         >
           <option value="Sunday Service">Sunday Service</option>
           <option value="Midweek Service">Midweek Service</option>
@@ -41,7 +41,7 @@ export default function ServiceSelector({ onServiceReady }: ServiceSelectorProps
           type="date" 
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
-          className="p-2 text-sm font-semibold border rounded-lg bg-gray-50 text-black focus:outline-none focus:border-[#550E0C]"
+          className="p-2 text-sm font-semibold border rounded-lg bg-gray-50 text-black focus:outline-none focus:border-[#3D0908]"
         />
       </div>
     </div>

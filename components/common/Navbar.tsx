@@ -12,7 +12,7 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
         onClick={() => setActiveTab('check-in')}
         className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all uppercase tracking-wider ${
           activeTab === 'check-in'
-            ? 'bg-[#550E0C] text-white shadow'
+            ? 'bg-[#3D0908] text-white shadow'
             : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
@@ -23,7 +23,7 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
         onClick={() => setActiveTab('insights')}
         className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all uppercase tracking-wider ${
           activeTab === 'insights'
-            ? 'bg-[#550E0C] text-white shadow'
+            ? 'bg-[#3D0908] text-white shadow'
             : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
@@ -34,7 +34,7 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
         onClick={() => setActiveTab('followup')}
         className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all uppercase tracking-wider ${
           activeTab === 'followup'
-            ? 'bg-[#550E0C] text-white shadow'
+            ? 'bg-[#3D0908] text-white shadow'
             : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
@@ -45,7 +45,7 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
         onClick={() => setActiveTab('matrix')}
         className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all uppercase tracking-wider ${
           activeTab === 'matrix'
-            ? 'bg-[#550E0C] text-white shadow'
+            ? 'bg-[#3D0908] text-white shadow'
             : 'text-gray-600 hover:bg-gray-100'
         }`}
       >

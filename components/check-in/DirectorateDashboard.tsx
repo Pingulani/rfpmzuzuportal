@@ -28,7 +28,7 @@ export default function DirectorateDashboard() {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-center">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Turnout</p>
-          <p className="text-2xl font-black text-[#550E0C] mt-1">{stats.todayTurnout}</p>
+          <p className="text-2xl font-black text-[#3D0908] mt-1">{stats.todayTurnout}</p>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-center">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Newcomers</p>

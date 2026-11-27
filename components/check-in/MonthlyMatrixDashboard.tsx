@@ -54,30 +54,30 @@ export default function ZonesMatrixDashboard() {
 
   const theme = activeServiceType === 'Sunday Service' 
     ? {
-      bgPrimary: 'bg-[#550E0C]',
+      bgPrimary: 'bg-[#3D0908]',
       bgSecondary: 'bg-black',
-      borderPrimary: 'border-[#550E0C]',
+      borderPrimary: 'border-[#3D0908]',
       borderSecondary: 'border-black',
       textMuted: 'text-white/70',
       textAccent: 'text-white',
       textHighlight: 'text-white',
-      textData: 'text-[#550E0C]',
+      textData: 'text-[#3D0908]',
       badge: 'bg-white',
-      ring: 'focus:border-[#550E0C]',
+      ring: 'focus:border-[#3D0908]',
       hover: 'hover:bg-black'
       }
     : {
       bgPrimary: 'bg-black',
-      bgSecondary: 'bg-[#550E0C]', 
-      borderPrimary: 'border-[#550E0C]',
+      bgSecondary: 'bg-[#3D0908]', 
+      borderPrimary: 'border-[#3D0908]',
       borderSecondary: 'border-white/30',
       textMuted: 'text-white/70',
       textAccent: 'text-white',
       textHighlight: 'text-white',
-      textData: 'text-[#550E0C]',
+      textData: 'text-[#3D0908]',
       badge: 'bg-white',
-      ring: 'focus:border-[#550E0C]',
-      hover: 'hover:bg-[#550E0C]'
+      ring: 'focus:border-[#3D0908]',
+      hover: 'hover:bg-[#3D0908]'
       };
 
   const loadData = async () => {
@@ -256,7 +256,7 @@ export default function ZonesMatrixDashboard() {
         <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => setActiveServiceType('Sunday Service')} 
-            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#550E0C] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-4 py-2 text-sm font-black uppercase rounded-lg transition-all flex items-center gap-2 ${activeServiceType === 'Sunday Service' ? 'bg-[#3D0908] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             <Calendar className="w-4 h-4" /> Sunday Services
           </button>
@@ -281,7 +281,7 @@ export default function ZonesMatrixDashboard() {
       </div>
 
       {errorMsg && (
-        <div className="bg-[#550E0C]/5 border border-[#550E0C]/20 text-[#550E0C] px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
+        <div className="bg-[#3D0908]/5 border border-[#3D0908]/20 text-[#3D0908] px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <p>{errorMsg}</p>
         </div>
@@ -290,7 +290,7 @@ export default function ZonesMatrixDashboard() {
       {/* Matrix Export Container */}
       <div id="zones-matrix-export-container" className="bg-white p-4 md:p-6 rounded-2xl border border-gray-200 shadow-xl font-sans">
         
-        <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 border-b-4 ${theme.borderPrimary} mb-4 transition-colors`}>
+        <div className={`${theme.bgPrimary} text-white px-6 py-4 rounded-t-xl flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 border-b-4 border-rfp-gold mb-4 transition-colors`}>
           <div>
             <span className={`text-xs font-black ${theme.textAccent} uppercase tracking-widest block mb-1`}>Branch Attendance Report</span>
             <h1 className="text-3xl font-black tracking-wider uppercase mb-0.5">MZUZU BRANCH</h1>
@@ -340,13 +340,13 @@ export default function ZonesMatrixDashboard() {
                         initialValue={wk.soulsWon} 
                         onSave={(val) => { if (wk.firstServiceId) handleServiceFieldUpdate(wk.firstServiceId, 'souls_won', val); }}
                         disabled={!hasService || savingServiceId === wk.firstServiceId}
-                        className={`w-full bg-transparent text-xl font-black text-[#550E0C] outline-none ${theme.ring} disabled:opacity-50`}
+                        className={`w-full bg-transparent text-xl font-black text-[#3D0908] outline-none ${theme.ring} disabled:opacity-50`}
                       />
                     </div>
 
                     <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col justify-center">
                       <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Var</span>
-                      <span className={`text-xl font-black ${wk.variance >= 0 ? 'text-[#550E0C]' : 'text-black'}`}>
+                      <span className={`text-xl font-black ${wk.variance >= 0 ? 'text-[#3D0908]' : 'text-black'}`}>
                         {wk.variance > 0 ? `+${wk.variance}` : wk.variance}
                       </span>
                     </div>
@@ -380,7 +380,7 @@ export default function ZonesMatrixDashboard() {
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {ZONE_GROUPS.map((group, gIdx) => (
                     <Fragment key={gIdx}>
-                      <tr className="bg-[#550E0C] border-y border-[#550E0C] text-white font-black uppercase tracking-wider text-xs">
+                      <tr className="bg-[#3D0908] border-y border-[#3D0908] text-white font-black uppercase tracking-wider text-xs">
                         <td colSpan={7} className="py-2 px-4">∇ {group.groupName}</td>
                       </tr>
                       {group.items.map((itemName, iIdx) => {
@@ -408,7 +408,7 @@ export default function ZonesMatrixDashboard() {
                                 {count > 0 ? <span className="text-gray-900">{count}</span> : <span className="text-gray-300">0</span>}
                               </td>
                             ))}
-                            <td className="py-2 px-3 text-center font-black bg-gray-50 text-[#550E0C] text-base">{avg}</td>
+                            <td className="py-2 px-3 text-center font-black bg-gray-50 text-[#3D0908] text-base">{avg}</td>
                           </tr>
                         );
                       })}

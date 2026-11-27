@@ -37,7 +37,7 @@ export default function LiveHeadcount({ serviceId }: LiveHeadcountProps) {
         <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide">Live Headcount</h2>
         <p className="text-xs text-gray-500">Total Check-ins for Selected Service</p>
       </div>
-      <div className="bg-[#550E0C] text-white text-3xl font-black px-6 py-3 rounded-lg shadow">
+      <div className="bg-[#3D0908] text-white text-3xl font-black px-6 py-3 rounded-lg shadow">
         {count}
       </div>
     </div>

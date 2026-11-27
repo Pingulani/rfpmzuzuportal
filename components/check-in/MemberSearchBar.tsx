@@ -100,7 +100,7 @@ export default function MemberSearchBar({ serviceId }: MemberSearchBarProps) {
           </button>
           <button
             onClick={() => setIsAddMemberOpen(true)}
-            className="bg-[#550E0C] text-white text-xs font-black uppercase tracking-wider py-2 px-3.5 rounded-lg hover:bg-black transition-colors shadow"
+            className="bg-[#3D0908] text-white text-xs font-black uppercase tracking-wider py-2 px-3.5 rounded-lg hover:bg-black transition-colors shadow"
           >
             + Add Member
           </button>
@@ -114,14 +114,14 @@ export default function MemberSearchBar({ serviceId }: MemberSearchBarProps) {
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search member by name or phone number..."
-          className="w-full p-4 bg-white border border-gray-300 rounded-xl shadow-md text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#550E0C]"
+          className="w-full p-4 bg-white border border-gray-300 rounded-xl shadow-md text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3D0908]"
         />
         {searching && (
           <span className="absolute right-4 top-4 text-xs font-bold text-gray-400 animate-pulse">Searching...</span>
         )}
       </div>
 
-      {errorMsg && <p className="text-xs font-bold text-[#550E0C] bg-[#550E0C]/5 p-3 rounded-lg">{errorMsg}</p>}
+      {errorMsg && <p className="text-xs font-bold text-[#3D0908] bg-[#3D0908]/5 p-3 rounded-lg">{errorMsg}</p>}
 
       {/* Search Results Dropdown / List */}
       {query.trim().length >= 2 && !searching && results.length === 0 && (
@@ -138,7 +138,7 @@ export default function MemberSearchBar({ serviceId }: MemberSearchBarProps) {
             </button>
             <button
               onClick={() => setIsAddMemberOpen(true)}
-              className="bg-[#550E0C] text-white text-xs font-black uppercase tracking-wider py-2 px-4 rounded-md hover:bg-black transition-colors"
+              className="bg-[#3D0908] text-white text-xs font-black uppercase tracking-wider py-2 px-4 rounded-md hover:bg-black transition-colors"
             >
               Add as Regular Member
             </button>
@@ -166,7 +166,7 @@ export default function MemberSearchBar({ serviceId }: MemberSearchBarProps) {
                   className={`py-1.5 px-4 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
                     isCheckedIn
                       ? 'bg-gray-200 text-gray-600 cursor-not-allowed'
-                      : 'bg-[#550E0C] text-white hover:bg-black'
+                      : 'bg-[#3D0908] text-white hover:bg-black'
                   }`}
                 >
                   {isCheckedIn ? 'Checked In ✓' : 'Check In'}

@@ -21,7 +21,7 @@ export default function NewcomerRoster() {
   return (
     <div className="w-full max-w-lg bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-6">
       <div className="flex items-center space-x-3 mb-4">
-        <div className="h-8 w-8 bg-[#550E0C] text-white rounded-full flex items-center justify-center font-bold">📋</div>
+        <div className="h-8 w-8 bg-[#3D0908] text-white rounded-full flex items-center justify-center font-bold">📋</div>
         <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide">Newcomer Follow-Up</h2>
       </div>
 
@@ -33,7 +33,7 @@ export default function NewcomerRoster() {
             <div key={person.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
               <div>
                 <p className="font-bold text-gray-900">{person.first_name} {person.last_name}</p>
-                <p className="text-xs text-gray-500">{person.phone_number || 'No phone provided'} • <span className="text-[#550E0C] font-semibold">{person.gender}</span></p>
+                <p className="text-xs text-gray-500">{person.phone_number || 'No phone provided'} • <span className="text-[#3D0908] font-semibold">{person.gender}</span></p>
               </div>
               {person.phone_number && (
                 <a 

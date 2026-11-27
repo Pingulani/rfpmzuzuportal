@@ -98,7 +98,7 @@ export default function MemberAttendanceRegister({ member, onClose }: MemberAtte
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="member-register-title">
       <section className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <header className="flex items-start justify-between gap-4 bg-[#550E0C] px-5 py-4 text-white sm:px-7">
+        <header className="flex items-start justify-between gap-4 border-b-4 border-rfp-gold bg-[#3D0908] px-5 py-4 text-white sm:px-7">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/70">Annual attendance register</p>
             <h2 id="member-register-title" className="mt-1 truncate text-lg font-black sm:text-xl">{member.full_name}</h2>
@@ -111,13 +111,13 @@ export default function MemberAttendanceRegister({ member, onClose }: MemberAtte
 
         <div className="flex flex-col gap-4 overflow-y-auto p-4 sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-sm font-bold text-[#550E0C]">
+            <div className="flex items-center gap-2 text-sm font-bold text-[#3D0908]">
               <CalendarDays className="h-4 w-4" />
               <span>Yearly service record</span>
             </div>
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
               Year
-              <select value={year} onChange={event => setYear(Number(event.target.value))} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#550E0C]">
+              <select value={year} onChange={event => setYear(Number(event.target.value))} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#3D0908]">
                 {Array.from({ length: Math.max(10, new Date().getFullYear() - 2015 + 1) }, (_, index) => new Date().getFullYear() - index).map(registerYear => (
                   <option key={registerYear} value={registerYear}>{registerYear}</option>
                 ))}
@@ -127,17 +127,17 @@ export default function MemberAttendanceRegister({ member, onClose }: MemberAtte
 
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm font-semibold text-slate-500">
-              <LoaderCircle className="h-5 w-5 animate-spin text-[#550E0C]" />
+              <LoaderCircle className="h-5 w-5 animate-spin text-[#3D0908]" />
               Loading yearly register…
             </div>
           ) : errorMessage ? (
-            <p role="alert" className="rounded-lg border border-[#550E0C]/20 bg-[#550E0C]/5 p-4 text-sm font-medium text-[#550E0C]">{errorMessage}</p>
+            <p role="alert" className="rounded-lg border border-[#3D0908]/20 bg-[#3D0908]/5 p-4 text-sm font-medium text-[#3D0908]">{errorMessage}</p>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-slate-200 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Attended</p>
-                  <p className="mt-1 text-2xl font-black text-[#550E0C]">{attendedCount}</p>
+                  <p className="mt-1 text-2xl font-black text-[#3D0908]">{attendedCount}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Services held</p>
@@ -145,7 +145,7 @@ export default function MemberAttendanceRegister({ member, onClose }: MemberAtte
                 </div>
                 <div className="col-span-2 rounded-xl border border-slate-200 p-4 sm:col-span-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Attendance</p>
-                  <p className="mt-1 text-2xl font-black text-[#550E0C]">{attendanceRate}%</p>
+                  <p className="mt-1 text-2xl font-black text-[#3D0908]">{attendanceRate}%</p>
                 </div>
               </div>
 
@@ -158,7 +158,7 @@ export default function MemberAttendanceRegister({ member, onClose }: MemberAtte
                     <section key={month} className="overflow-hidden rounded-xl border border-slate-200">
                       <div className="flex items-center justify-between bg-slate-50 px-3 py-2">
                         <h3 className="text-xs font-black uppercase tracking-wide text-black">{month}</h3>
-                        <span className="text-[11px] font-bold text-[#550E0C]">{monthAttended}/{monthServices.length}</span>
+                        <span className="text-[11px] font-bold text-[#3D0908]">{monthAttended}/{monthServices.length}</span>
                       </div>
                       {monthServices.length ? (
                         <ul className="divide-y divide-slate-100">
@@ -168,7 +168,7 @@ export default function MemberAttendanceRegister({ member, onClose }: MemberAtte
                               <li key={service.id} className="flex items-center justify-between gap-2 px-3 py-2 text-xs">
                                 <span className="font-medium text-slate-700">{service.service_date}</span>
                                 <span className="mr-auto text-slate-500">{service.service_type}</span>
-                                <span className={`inline-flex items-center gap-1 font-bold ${attended ? 'text-[#550E0C]' : 'text-slate-500'}`}>
+                                <span className={`inline-flex items-center gap-1 font-bold ${attended ? 'text-[#3D0908]' : 'text-slate-500'}`}>
                                   {attended ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
                                   {attended ? 'Present' : 'Absent'}
                                 </span>
