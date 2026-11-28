@@ -41,7 +41,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="absolute inset-0 bg-black/10" />
       </div>
 
-      <div className="relative grid w-full max-w-6xl overflow-hidden rounded-[1.75rem] border border-rfp-gold/25 bg-white shadow-[0_30px_100px_rgba(0,0,0,0.5)] lg:min-h-[700px] lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="relative grid w-full max-w-7xl overflow-hidden rounded-[1.75rem] border border-rfp-gold/25 bg-white shadow-[0_30px_100px_rgba(0,0,0,0.5)] lg:min-h-[760px] lg:grid-cols-[1.05fr_0.95fr]">
         <section
           className="relative flex flex-col justify-between overflow-hidden bg-[#3D0908] bg-cover bg-center px-7 py-8 text-white sm:px-10 sm:py-10 lg:px-12 lg:py-12"
           style={{
