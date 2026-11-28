@@ -546,8 +546,8 @@ export default function PortalDashboard() {
 
       {/* 1. SERVICE CHECK-IN TAB */}
       {activeTab === 'checkin' && (
-        <div className="w-full max-w-6xl space-y-5">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="flex w-full max-w-6xl flex-col gap-5">
+          <div className="order-2 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
             <div className="bg-white rounded-xl border border-[#3D0908]/15 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-2">
               <div>
                 <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Active Members</p>
@@ -578,7 +578,7 @@ export default function PortalDashboard() {
             </div>
           </div>
 
-          <section aria-labelledby="team-chart-title" className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm">
+          <section aria-labelledby="team-chart-title" className="order-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-6">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1 mb-5">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#3D0908]">People &amp; teams</p>
@@ -650,9 +650,11 @@ export default function PortalDashboard() {
             )}
           </section>
 
-          <DashboardActivityCharts key={rankingRefreshKey} />
+          <div className="order-4">
+            <DashboardActivityCharts key={rankingRefreshKey} />
+          </div>
 
-          <div className="w-full bg-white rounded-2xl shadow-xl border border-gray-200 p-4 md:p-6">
+          <div className="order-1 w-full rounded-2xl border border-gray-200 bg-white p-4 shadow-xl md:p-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 pb-4 border-b border-gray-200">
             <div>
               <h2 className="text-xl font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
