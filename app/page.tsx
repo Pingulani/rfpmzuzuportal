@@ -373,7 +373,13 @@ export default function PortalDashboard() {
   const activeTeams = Array.from(activeTeamCounts.values())
     .sort((a, b) => b.memberCount - a.memberCount || a.name.localeCompare(b.name));
   const chartTeams = activeTeams.slice(0, 6);
-  const maxTeamMemberCount = chartTeams[0]?.memberCount || 1;
+  const teamChartMax = Math.max(4, Math.ceil((chartTeams[0]?.memberCount || 0) / 4) * 4);
+  const teamChartPoints = chartTeams.map((team, index) => ({
+    ...team,
+    x: chartTeams.length === 1 ? 445 : 115 + index * (655 / (chartTeams.length - 1)),
+    y: 205 - (team.memberCount / teamChartMax) * 170,
+  }));
+  const teamChartLine = teamChartPoints.map(point => `${point.x},${point.y}`).join(' ');
 
   if (!isAuthenticated) {
     return <LoginPage onLogin={handleDemoLogin} />;
@@ -585,26 +591,58 @@ export default function PortalDashboard() {
             ) : chartTeams.length === 0 ? (
               <p className="py-8 text-center text-sm text-slate-500">No active team assignments to chart yet.</p>
             ) : (
-              <div className="space-y-4">
-                {chartTeams.map(({ name, memberCount }) => (
-                  <div key={name} className="grid grid-cols-[minmax(5rem,8rem)_1fr_2.5rem] sm:grid-cols-[minmax(8rem,12rem)_1fr_3rem] items-center gap-3">
-                    <span className="text-xs font-semibold text-slate-600 truncate" title={name}>{name}</span>
-                    <div
-                      className="h-3 bg-slate-100 rounded-full overflow-hidden"
-                      role="progressbar"
-                      aria-label={`${name}: ${memberCount} active members`}
-                      aria-valuemin={0}
-                      aria-valuemax={maxTeamMemberCount}
-                      aria-valuenow={memberCount}
-                    >
-                      <div
-                        className="h-full bg-[#3D0908] rounded-full"
-                        style={{ width: `${(memberCount / maxTeamMemberCount) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-right text-xs font-black text-slate-700">{memberCount}</span>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <svg
+                  viewBox="0 0 820 320"
+                  role="img"
+                  aria-label={`Line chart of active members by team: ${chartTeams.map(team => `${team.name}, ${team.memberCount}`).join('; ')}`}
+                  className="h-[300px] w-full min-w-[680px] overflow-visible"
+                >
+                  <text x="20" y="120" transform="rotate(-90 20 120)" textAnchor="middle" className="fill-slate-500 text-[10px] font-semibold">
+                    Active members
+                  </text>
+                  {[0, 1, 2, 3, 4].map(tick => {
+                    const y = 205 - tick * 42.5;
+                    const value = Math.round((teamChartMax * tick) / 4);
+                    return (
+                      <g key={tick}>
+                        <line x1="95" y1={y} x2="795" y2={y} className="stroke-slate-200" strokeDasharray={tick === 0 ? undefined : '4 5'} />
+                        <text x="84" y={y + 4} textAnchor="end" className="fill-slate-500 text-[10px]">{value}</text>
+                      </g>
+                    );
+                  })}
+                  {teamChartPoints.length > 1 && (
+                    <polyline
+                      points={teamChartLine}
+                      fill="none"
+                      stroke="#3D0908"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+                  {teamChartPoints.map((point, index) => (
+                    <g key={point.name}>
+                      <title>{`${point.name}: ${point.memberCount} active members`}</title>
+                      <circle cx={point.x} cy={point.y} r="5.5" fill={index === 0 ? '#B9913B' : '#3D0908'} stroke="white" strokeWidth="2" />
+                      <text x={point.x} y={point.y - 12} textAnchor="middle" className="fill-slate-700 text-[11px] font-black">
+                        {point.memberCount}
+                      </text>
+                      <text
+                        x={point.x - 4}
+                        y="244"
+                        textAnchor="end"
+                        transform={`rotate(-25 ${point.x - 4} 244)`}
+                        className="fill-slate-600 text-[10px] font-semibold"
+                      >
+                        {point.name}
+                      </text>
+                    </g>
+                  ))}
+                </svg>
+                <ul className="sr-only">
+                  {chartTeams.map(team => <li key={team.name}>{team.name}: {team.memberCount} active members</li>)}
+                </ul>
                 {activeTeams.length > chartTeams.length && (
                   <p className="pt-1 text-[11px] text-slate-400">Showing the 6 teams with the most active members.</p>
                 )}
