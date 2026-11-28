@@ -149,13 +149,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               </button>
             </form>
 
-            <p className="mt-5 rounded-lg bg-[#f5f0ec] px-3 py-2.5 text-center text-xs text-[#615552]">
-              Demo access: username <strong>admin</strong> · password <strong>1234</strong>
-            </p>
-
-            <p className="mt-5 text-center text-[10px] leading-5 text-[#8b7d79]">
-              Demo sign-in only. This client-side check is not secure authentication and must not be used for production access.
-            </p>
             <div className="mt-8 border-t border-[#eee6e1] pt-5 text-center text-[10px] text-[#9b908d]">
               © {new Date().getFullYear()} Raised For A Purpose Ministries · Mzuzu Branch
             </div>

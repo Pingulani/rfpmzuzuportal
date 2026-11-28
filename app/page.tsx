@@ -396,98 +396,105 @@ export default function PortalDashboard() {
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[250px] bg-[#3D0908] text-white transition-transform duration-200 lg:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-[86px] px-6 flex items-center border-b border-rfp-gold/35">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/rfp-gold-logo.png"
-              alt="Raised For A Purpose Ministries logo"
-              width={48}
-              height={48}
-              priority
-              className="w-12 h-12 rounded-full object-contain"
-            />
-            <div>
-              <p className="text-[10px] font-black tracking-[0.06em] leading-tight text-white">RAISED FOR A PURPOSE</p>
-              <p className="text-[10px] text-white/65 font-bold tracking-[0.16em] mt-1">MZUZU BRANCH</p>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] p-2.5 text-white transition-transform duration-200 lg:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex h-full flex-col overflow-y-auto rounded-[1.5rem] border border-rfp-gold/30 bg-gradient-to-b from-[#3D0908] via-[#300807] to-[#170707] shadow-[0_20px_60px_rgba(35,5,4,0.28)]">
+          <div className="flex min-h-[78px] items-center border-b border-rfp-gold/25 px-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <Image
+                src="/rfp-gold-logo.png"
+                alt="Raised For A Purpose Ministries logo"
+                width={46}
+                height={46}
+                priority
+                className="h-11 w-11 shrink-0 rounded-full object-contain ring-1 ring-rfp-gold/60"
+              />
+              <div className="min-w-0">
+                <p className="truncate text-[10px] font-black tracking-[0.06em] leading-tight text-white">RAISED FOR A PURPOSE</p>
+                <p className="mt-1 text-[9px] font-bold tracking-[0.16em] text-rfp-gold">MZUZU BRANCH</p>
+              </div>
             </div>
+            <button aria-label="Close menu" onClick={() => setMobileMenuOpen(false)} className="ml-auto p-1 text-white/75 lg:hidden">
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button aria-label="Close menu" onClick={() => setMobileMenuOpen(false)} className="ml-auto lg:hidden p-1 text-white/75">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        <nav className="p-4 space-y-1.5">
-          {[
-            { id: 'checkin' as const, label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'members' as const, label: 'Member Management', icon: UsersRound },
-            { id: 'teamDirectory' as const, label: 'Teams', icon: UsersRound },
-            { id: 'zones' as const, label: 'Zones Matrix', icon: Network },
-            { id: 'teams' as const, label: 'Teams Matrix', icon: FolderKanban },
-          ].map(({ id, label, icon: Icon }) => (
+          <div className="mx-3 mt-4 flex items-center gap-3 rounded-xl border border-white/10 bg-black/15 p-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-[#3D0908] ring-2 ring-rfp-gold/70">AD</div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-white">Administrator</p>
+              <p className="mt-0.5 truncate text-[10px] text-white/60">Mzuzu Branch</p>
+            </div>
+            <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-rfp-gold shadow-[0_0_10px_rgba(208,173,90,0.7)]" aria-label="Signed in" />
+          </div>
+
+          <nav className="space-y-1 px-3 pt-5">
+            <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.2em] text-white/45">Workspace</p>
+            {[
+              { id: 'checkin' as const, label: 'Dashboard', icon: LayoutDashboard },
+              { id: 'members' as const, label: 'Member Management', icon: UsersRound },
+              { id: 'teamDirectory' as const, label: 'Teams', icon: UsersRound },
+              { id: 'zones' as const, label: 'Zones Matrix', icon: Network },
+              { id: 'teams' as const, label: 'Teams Matrix', icon: FolderKanban },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => {
+                  setActiveTab(id);
+                  setMobileMenuOpen(false);
+                }}
+                className={`group flex w-full items-center gap-3 rounded-xl border-l-2 px-3 py-3 text-left text-xs font-semibold transition-all ${
+                  activeTab === id
+                    ? 'border-rfp-gold bg-white/10 text-white shadow-inner shadow-black/10'
+                    : 'border-transparent text-white/70 hover:bg-white/[0.07] hover:text-white'
+                }`}
+              >
+                <Icon className={`h-[17px] w-[17px] ${activeTab === id ? 'text-rfp-gold' : 'text-white/65 group-hover:text-rfp-gold'}`} />
+                <span>{label}</span>
+                {activeTab === id && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-rfp-gold" />}
+              </button>
+            ))}
+          </nav>
+
+          <div className="mt-5 space-y-1.5 px-3">
+            <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.2em] text-white/45">Quick actions</p>
             <button
-              key={id}
+              type="button"
               onClick={() => {
-                setActiveTab(id);
+                setIsAddMemberOpen(true);
                 setMobileMenuOpen(false);
               }}
-              className={`w-full border-l-2 px-3 py-3 rounded-lg flex items-center gap-3 text-sm font-semibold transition-colors ${
-                activeTab === id
-                  ? 'bg-black text-white shadow-lg shadow-black/30 border-rfp-gold'
-                  : 'border-transparent text-white/80 hover:bg-black/20 hover:text-white'
-              }`}
+              className="flex w-full items-center gap-3 rounded-xl border border-rfp-gold/45 bg-rfp-gold/10 px-3 py-3 text-left text-xs font-bold text-white transition-colors hover:bg-rfp-gold/20"
             >
-              <Icon className="w-[18px] h-[18px]" />
-              <span>{label}</span>
+              <UserCheck className="h-[17px] w-[17px] text-rfp-gold" />
+              <span>Add Member</span>
             </button>
-          ))}
-        </nav>
-
-        <div className="space-y-2 px-4 pt-1">
-          <button
-            type="button"
-            onClick={() => {
-              setIsAddMemberOpen(true);
-              setMobileMenuOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-lg border border-rfp-gold/45 bg-black/20 px-3 py-3 text-left text-sm font-bold text-white transition-colors hover:bg-black/40"
-          >
-            <UserCheck className="h-[18px] w-[18px] text-rfp-gold" />
-            <span>Add Member</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsNewcomerOpen(true);
-              setMobileMenuOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-lg border border-white/15 px-3 py-3 text-left text-sm font-semibold text-white/85 transition-colors hover:border-rfp-gold/45 hover:bg-black/20 hover:text-white"
-          >
-            <UserPlus className="h-[18px] w-[18px]" />
-            <span>Newcomer Check-in</span>
-          </button>
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 space-y-3 border-t border-white/10 p-4">
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-9 h-9 rounded-full bg-white text-[#3D0908] flex items-center justify-center font-black text-xs">AD</div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold truncate">Administrator</p>
-              <p className="text-[10px] text-white/65 mt-0.5">Mzuzu Branch</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsNewcomerOpen(true);
+                setMobileMenuOpen(false);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
+            >
+              <UserPlus className="h-[17px] w-[17px]" />
+              <span>Newcomer Check-in</span>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-white/75 transition-colors hover:bg-black/25 hover:text-white"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </button>
+
+          <div className="mt-auto border-t border-rfp-gold/20 p-3">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-xs font-semibold text-white/65 transition-colors hover:bg-white/[0.07] hover:text-white"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+          </div>
         </div>
       </aside>
 
-      <main className="lg:pl-[250px] min-h-screen">
+      <main className="min-h-screen lg:pl-[280px]">
         <header className="h-[86px] bg-white border-b border-b-rfp-gold/40 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button aria-label="Open menu" onClick={() => setMobileMenuOpen(true)} className="lg:hidden p-2 rounded-lg border border-slate-200">
