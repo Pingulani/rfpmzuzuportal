@@ -26,21 +26,28 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#170b0a] px-4 py-8 sm:px-6 lg:px-10">
+    <main
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#170b0a] bg-cover bg-center bg-fixed px-4 py-8 sm:px-6 lg:px-10"
+      style={{
+        backgroundImage: 'linear-gradient(rgba(20, 7, 6, 0.3), rgba(20, 7, 6, 0.42)), url("/login-background.webp")',
+      }}
+    >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(20, 7, 6, 0.72), rgba(20, 7, 6, 0.82)), url("https://rfpministries.com/wp-content/uploads/2025/01/MOZY0001.webp")',
-        }}
+        className="pointer-events-none absolute inset-0"
       >
         <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-rfp-gold/10 blur-3xl" />
-        <div className="absolute -bottom-48 -right-32 h-[32rem] w-[32rem] rounded-full bg-[#3D0908]/80 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#100707_100%)]" />
+        <div className="absolute -bottom-48 -right-32 h-[32rem] w-[32rem] rounded-full bg-[#3D0908]/35 blur-3xl" />
+        <div className="absolute inset-0 bg-black/10" />
       </div>
 
       <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[1.75rem] border border-rfp-gold/25 bg-white shadow-[0_30px_100px_rgba(0,0,0,0.5)] lg:min-h-[650px] lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="relative flex flex-col justify-between overflow-hidden bg-[#3D0908] px-7 py-8 text-white sm:px-10 sm:py-10 lg:px-12 lg:py-12">
+        <section
+          className="relative flex flex-col justify-between overflow-hidden bg-[#3D0908] bg-cover bg-center px-7 py-8 text-white sm:px-10 sm:py-10 lg:px-12 lg:py-12"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(61, 9, 8, 0.62), rgba(23, 7, 7, 0.78)), url("/login-background.webp")',
+          }}
+        >
           <div aria-hidden="true" className="pointer-events-none absolute inset-0">
             <div className="absolute -right-20 top-12 h-72 w-72 rounded-full border border-rfp-gold/20" />
             <div className="absolute -right-10 top-24 h-52 w-52 rounded-full border border-rfp-gold/15" />
