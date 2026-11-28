@@ -27,7 +27,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#170b0a] px-4 py-8 sm:px-6 lg:px-10">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(20, 7, 6, 0.72), rgba(20, 7, 6, 0.82)), url("https://rfpministries.com/wp-content/uploads/2025/01/MOZY0001.webp")',
+        }}
+      >
         <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-rfp-gold/10 blur-3xl" />
         <div className="absolute -bottom-48 -right-32 h-[32rem] w-[32rem] rounded-full bg-[#3D0908]/80 blur-3xl" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#100707_100%)]" />
